@@ -4,6 +4,7 @@ import Landing from './Components/Landing';
 import SignIn from './Components/SignIn';
 import FarmerRegistrationForm from './Components/FarmerRegistrationForm';
 import BuyerRegistrationForm from './Components/BuyerRegistrationForm';
+import BuyerHomePage from './Components/BuyerHomePage';
 function App() {
   return (
     <BrowserRouter>
