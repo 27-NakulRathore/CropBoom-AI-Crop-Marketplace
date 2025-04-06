@@ -11,15 +11,36 @@ function SignIn() {
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
-  const handleSignIn = (e) => {
+  const handleSignIn = async (e) => {
     e.preventDefault();
-    console.log('Signing in as', isFarmer ? 'Farmer' : 'Buyer', 'with:', email, password);
-    if (isFarmer) {
-      navigate('/farmer/dashboard');
-    } else {
-      navigate('/buyer/dashboard');
+    try {
+      const response = await fetch('http://localhost:8080/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+  
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Login successful. Role:', data.role);
+  
+        if (data.role === 'farmer') {
+          navigate('/farmer/dashboard');
+        } else if (data.role === 'buyer') {
+          navigate('/buyer/dashboard');
+        }
+      } else {
+        const errorText = await response.text();
+        alert(`Login failed: ${errorText}`);
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      alert('An error occurred. Please try again.');
     }
   };
+  
 
   const handleRoleChange = (value) => {
     setIsFarmer(value === 'farmer');

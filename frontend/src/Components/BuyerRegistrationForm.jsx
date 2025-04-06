@@ -13,11 +13,38 @@ function BuyerRegistrationForm() {
   const [contactNumber, setContactNumber] = useState('');
   const navigate = useNavigate();
 
-  const handleRegister = (e) => {
+  const handleRegister =async (e) => {
     e.preventDefault();
     console.log('Registering Buyer:', { name, email, password, companyName, shippingAddress, contactNumber });
     // In a real application, you would handle buyer registration logic here.
-    navigate('/buyer/dashboard'); // Redirect to buyer dashboard after registration
+    
+    try {
+      const response = await fetch('http://localhost:8080/api/register/buyer', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name,
+          email,
+          password,
+          companyName,
+          shippingAddress,
+          contactNumber,
+        }),
+      });
+  
+      if (response.ok) {
+        const result = await response.json(); // or response.json() if needed
+        console.log('Success:', result);
+        
+        navigate('/BuyerHomePage');
+      } else {
+        console.error('Failed to register farmer. Status:', response.status);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    }
   };
 
   return (

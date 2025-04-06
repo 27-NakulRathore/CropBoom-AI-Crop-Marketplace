@@ -12,14 +12,38 @@ function FarmerRegistrationForm() {
   const [location, setLocation] = useState('');
   const [contactNumber, setContactNumber] = useState('');
   const navigate = useNavigate();
-
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
     console.log('Registering Farmer:', { name, email, password, farmName, location, contactNumber });
-    // In a real application, you would handle farmer registration logic here.
-    navigate('/farmer/dashboard'); // Redirect to farmer dashboard after registration
+  
+    try {
+      const response = await fetch('http://localhost:8080/api/register/farmer', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name,
+          email,
+          password,
+          farmName,
+          location,
+          contactNumber,
+        }),
+      });
+  
+      if (response.ok) {
+        const result = await response.json(); // or response.json() if needed
+        console.log('Success:', result);
+        navigate('/farmer/dashboard');
+      } else {
+        console.error('Failed to register farmer. Status:', response.status);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    }
   };
-
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-100 to-green-50 flex justify-center items-center">
       <div className="bg-white p-8 rounded-lg shadow-md border border-gray-200 w-full max-w-lg animate-fade-in"> {/* Increased max-w to lg */}
