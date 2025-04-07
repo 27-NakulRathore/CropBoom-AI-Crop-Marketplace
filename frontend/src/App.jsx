@@ -5,11 +5,13 @@ import SignIn from './Components/SignIn';
 import FarmerRegistrationForm from './Components/FarmerRegistrationForm';
 import BuyerRegistrationForm from './Components/BuyerRegistrationForm';
 import BuyerHomePage from './Components/BuyerHomePage';
+import FarmerHomePage from './Components/FarmerHomePage';
+import UploadCropForm from './Components/UploadCropForm';
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Landing />} />
+        <Route path="/" element={<Landing/>} />
         <Route path="/signin" element={<SignIn />} />
         <Route path="/register/farmer" element={<FarmerRegistrationForm />} />
         <Route path="/register/buyer" element={<BuyerRegistrationForm />} />
