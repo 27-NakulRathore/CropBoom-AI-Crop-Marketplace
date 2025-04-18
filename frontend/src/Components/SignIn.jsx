@@ -58,9 +58,13 @@ function SignIn() {
           console.log('Login successful. Role:', data.role);
 
           if (data.role === 'farmer') {
-            navigate('/farmer/dashboard');
+            navigate('/FarmerHomePage'); // Navigate to FarmerHomePage
           } else if (data.role === 'buyer') {
-            navigate('/buyer/dashboard');
+            navigate('/BuyerHomePage'); // Navigate to BuyerHomePage
+          } else {
+            // Handle other roles or scenarios if needed
+            alert('Login successful, navigating to default page.');
+            navigate('/'); // Or some default dashboard
           }
         } else {
           const errorText = await response.text();
