@@ -86,7 +86,8 @@ function FarmerRegistrationForm() {
         if (response.ok) {
           const result = await response.json();
           console.log('Success:', result);
-          navigate('/farmer/dashboard');
+          // Redirect to the sign-in page after successful registration
+          navigate('/signin');
         } else {
           console.error('Failed to register farmer. Status:', response.status);
           // Optionally set an error message to display to the user
