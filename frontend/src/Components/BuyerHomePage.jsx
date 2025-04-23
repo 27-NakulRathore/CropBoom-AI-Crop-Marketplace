@@ -16,11 +16,14 @@ function BuyerProfile() {
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
     console.log('Search term:', e.target.value);
+    // In a real application, you would likely trigger a search function here
   };
 
   const handleLogout = () => {
     setIsDropdownOpen(false);
-    navigate('/signin');
+    // In a real application, you would handle your actual logout logic here,
+    // such as clearing user tokens or session data.
+    navigate('/signin'); // Navigate to the sign-in page (your assumed landing after logout)
   };
 
   const handleEditProfile = () => {
@@ -66,7 +69,7 @@ function BuyerProfile() {
               </div>
             </div>
 
-            {/* Profile Dropdown - Moved to the end */}
+            {/* Profile Dropdown */}
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={toggleDropdown}

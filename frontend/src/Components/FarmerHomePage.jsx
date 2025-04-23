@@ -10,8 +10,9 @@ function FarmerHomePage() {
 
   const handleLogout = () => {
     setIsDropdownOpen(false);
-    // In a real application, you would handle logout logic here.
-    navigate('/signin');
+    // In a real application, you would handle your actual logout logic here,
+    // such as clearing user tokens or session data.
+    navigate('/'); // Navigate to the landing page (or your sign-in page if that's your landing)
   };
 
   const handleEditProfile = () => {
