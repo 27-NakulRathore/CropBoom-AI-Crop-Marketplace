@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link ,useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTractor, faSignOutAlt, faCloudUpload, faListAlt, faArrowRight, faUserCircle, faCog } from '@fortawesome/free-solid-svg-icons'; // Added faUserCircle and faCog
 
@@ -7,6 +7,8 @@ function FarmerHomePage() {
   const navigate = useNavigate();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const location = useLocation();
+  const email = location.state?.email;
 
   const handleLogout = () => {
     setIsDropdownOpen(false);
@@ -39,6 +41,7 @@ function FarmerHomePage() {
   }, [dropdownRef]);
 
   return (
+    
     <div className="min-h-screen bg-green-50 flex flex-col">
       {/* Header */}
       <header className="bg-white shadow-md py-4 px-6 flex items-center justify-between">
@@ -53,6 +56,9 @@ function FarmerHomePage() {
           <FontAwesomeIcon icon={faTractor} size="lg" className="mr-2" />
           Welcome, Farmer!
         </div>
+        <div className="text-sm text-gray-600 mt-1">
+  Logged in as: <span className="font-medium">{email}</span>
+</div>
 
         {/* Right Side: Profile Dropdown */}
         <div className="relative" ref={dropdownRef}>
@@ -102,13 +108,13 @@ function FarmerHomePage() {
             </div>
             <h2 className="text-2xl font-semibold text-gray-800 mb-4 text-center">Upload Crop</h2>
             <p className="text-gray-600 text-center text-lg mb-6">List your harvested crops for sale.</p>
-            <Link
-              to="/farmer/upload-crop"
-              className="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-full focus:outline-none focus:shadow-outline transition-colors duration-300 flex items-center"
-            >
-              Upload Now
-              <FontAwesomeIcon icon={faArrowRight} className="ml-2" />
-            </Link>
+            <button
+  onClick={() => navigate('/farmer/upload-crop', { state: { email } })}
+  className="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-full focus:outline-none focus:shadow-outline transition-colors duration-300 flex items-center"
+>
+  Upload Now
+  <FontAwesomeIcon icon={faArrowRight} className="ml-2" />
+</button>
           </div>
 
           {/* My Crop Listing Box */}

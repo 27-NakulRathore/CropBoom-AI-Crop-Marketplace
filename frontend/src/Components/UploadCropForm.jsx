@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCloudUpload } from '@fortawesome/free-solid-svg-icons';
+import { useLocation } from 'react-router-dom';
 
 function UploadCropFormSimplified() {
   const [cropName, setCropName] = useState('');
@@ -8,7 +9,10 @@ function UploadCropFormSimplified() {
   const [unit, setUnit] = useState('kg');
   const [address, setAddress] = useState('');
   const [image, setImage] = useState(null);
+  const location = useLocation();
+  const email = location.state?.email;
 
+  console.log("Received email:", email);
   const handleImageChange = (e) => {
     setImage(e.target.files[0]);
   };

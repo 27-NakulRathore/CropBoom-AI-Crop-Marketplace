@@ -77,6 +77,7 @@ function SignInForm() {
                 if (response.ok) {
                     const data = await response.json();
                     console.log('Login successful. Role:', data.role);
+                    console.log('Login successful. Role:', data.email);
                     toast.success('Login successful!', {
                         position: "top-right",
                         autoClose: 3000,
@@ -89,12 +90,13 @@ function SignInForm() {
 
                     setTimeout(() => {
                         if (data.role === 'farmer') {
-                            navigate('/FarmerHomePage');
+                            navigate('/FarmerHomePage', { state: { email: data.email } });
                         } else if (data.role === 'buyer') {
-                            navigate('/BuyerHomePage');
+                            navigate('/BuyerHomePage', { state: { email: data.email } });
                         } else {
                             navigate('/');
                         }
+                        
                     }, 3000);
 
                 } else {
