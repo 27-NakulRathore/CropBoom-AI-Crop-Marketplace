@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCloudUpload } from '@fortawesome/free-solid-svg-icons';
 import { useLocation } from 'react-router-dom';
+import axios from 'axios';
 
 function UploadCropFormSimplified() {
   const [cropName, setCropName] = useState('');
@@ -17,19 +18,34 @@ function UploadCropFormSimplified() {
     setImage(e.target.files[0]);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const formData = new FormData();
     formData.append('cropName', cropName);
-    formData.append('quantity', quantity);
-    formData.append('unit', unit);
+    formData.append('quantity', parseFloat(quantity));
+
+    //formData.append('unit', unit);
     formData.append('address', address);
+    formData.append('email', email);
+
     if (image) {
-      formData.append('image', image);
+      formData.append('CropImage', image);
     }
     // Implement your upload logic here (API call, etc.)
+    try {
+      const response = await axios.post('http://localhost:8080/api/crops/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+  
+      alert(response.data); // Show server response
+    } catch (error) {
+      console.error('Error uploading crop:', error);
+      alert('Upload failed');
+    }
     console.log('Form Data:', Object.fromEntries(formData));
-    alert('Crop uploaded!'); // Placeholder for success message
+    //alert('Crop uploaded!'); // Placeholder for success message
   };
 
   return (
@@ -101,7 +117,7 @@ function UploadCropFormSimplified() {
             </label>
             <input
               type="file"
-              id="image"
+              id="cropImage"
               className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline border-green-300 focus:border-green-500"
               onChange={handleImageChange}
               accept="image/*" // Optional: Limit to image files
