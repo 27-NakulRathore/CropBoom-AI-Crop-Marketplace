@@ -78,9 +78,14 @@ function SignInForm() {
                     const data = await response.json();
                     console.log('Login successful. Role:', data.role);
                     console.log('Login successful. Role:', data.email);
+
+                    // ✅ Store email in localStorage
+                    localStorage.setItem("email", data.email);
+                    console.log("Saved email to localStorage:", localStorage.getItem("email"));
+                    
                     toast.success('Login successful!', {
                         position: "top-right",
-                        autoClose: 3000,
+                        autoClose: 1500,
                         hideProgressBar: false,
                         closeOnClick: true,
                         pauseOnHover: true,
@@ -104,7 +109,7 @@ function SignInForm() {
                     console.error(`Login failed: ${errorText}`);
                     toast.error(`Login failed: ${errorText}`, {
                         position: "top-right",
-                        autoClose: 3000,
+                        autoClose: 1500,
                         hideProgressBar: false,
                         closeOnClick: true,
                         pauseOnHover: true,
@@ -116,7 +121,7 @@ function SignInForm() {
                 console.error('Login error:', error);
                 toast.error('An error occurred. Please try again.', {
                     position: "top-right",
-                    autoClose: 3000,
+                    autoClose: 1500,
                     hideProgressBar: false,
                     closeOnClick: true,
                     pauseOnHover: true,

@@ -86,7 +86,7 @@ function BuyerRegistrationForm() {
                         name,
                         email,
                         password,
-                        shippingAddress,
+                        address: shippingAddress,
                         contactNumber,
                     }),
                 });
