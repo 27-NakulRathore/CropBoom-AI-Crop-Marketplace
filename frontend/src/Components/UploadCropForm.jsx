@@ -27,8 +27,7 @@ async function analyzeImage(base64Image, cropName) {
 
   try {
     const response = await axios.post(
-  `${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, // ✅ correct
-
+  `${GEMINI_API_URL}?key=${GEMINI_API_KEY}`,
       {
         contents: [
           {
@@ -211,8 +210,6 @@ function UploadCropFormSimplified() {
       formData.append('email', email);
       if (image) formData.append('CropImage', image);
       
-      console.log("Uploading crop with data:", formData);
-
       // Add analysis data if available
       if (analysisData.quality) {
         formData.append('quality', analysisData.quality);
