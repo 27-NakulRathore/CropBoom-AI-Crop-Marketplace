@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEdit, faTrash, faEye, faCheckCircle, faMapMarkerAlt, faChartLine, faStar, faCalendarAlt } from '@fortawesome/free-solid-svg-icons';
+import { faEdit, faTrash, faEye, faCheckCircle, faMapMarkerAlt, faChartLine, faStar, faCalendarAlt, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 import axios from 'axios';
 
 function MyCropListings() {
@@ -11,6 +11,11 @@ function MyCropListings() {
   const [searchParams] = useSearchParams();
   const email = searchParams.get('email');
   const [confirmingSold, setConfirmingSold] = useState(null);
+  const navigate = useNavigate();
+
+  const handleBackClick = () => {
+    navigate('/FarmerHomePage', { state: { email } });
+  };
 
   useEffect(() => {
     const fetchListings = async () => {
@@ -26,12 +31,10 @@ function MyCropListings() {
           }
         );
 
-
-        console.log("API Response:", response.data); // Debugging
+        console.log("API Response:", response.data);
 
         const listingsWithData = response.data.map(listing => ({
           ...listing,
-          // Ensure all fields have values
           cropName: listing.cropName || 'Unnamed Crop',
           quantity: listing.quantity || 0,
           unit: listing.unit || 'kg',
@@ -42,13 +45,11 @@ function MyCropListings() {
           address: listing.address || 'Not specified',
           listedOn: listing.listedOn ? new Date(listing.listedOn) : new Date(),
           analysisDate: listing.analysisDate ? new Date(listing.analysisDate) : null,
-          // Handle image data
           imageUrl: listing.imageData 
             ? `data:image/jpeg;base64,${listing.imageData}`
             : null
         }));
 
-        console.log("Processed Listings:", listingsWithData); // Debugging
         setListings(listingsWithData);
         setLoading(false);
       } catch (err) {
@@ -68,9 +69,9 @@ function MyCropListings() {
 
   const handleDelete = async (id) => {
     try {
-await axios.delete(`http://localhost:8080/api/crops/${id}`, {
-  headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
-});
+      await axios.delete(`http://localhost:8080/api/crops/${id}`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
+      });
 
       setListings(listings.filter(listing => listing.id !== id));
     } catch (err) {
@@ -81,12 +82,11 @@ await axios.delete(`http://localhost:8080/api/crops/${id}`, {
 
   const handleMarkAsSold = async (id) => {
     try {
-await axios.patch(
-  `http://localhost:8080/api/crops/${id}/status`,
-  { status: 'sold' },
-  { headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` } }
-);
-
+      await axios.patch(
+        `http://localhost:8080/api/crops/${id}/status`,
+        { status: 'sold' },
+        { headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` } }
+      );
 
       setListings(listings.map(listing =>
         listing.id === id ? { ...listing, status: 'sold' } : listing
@@ -137,8 +137,20 @@ await axios.patch(
   }
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      <h2 className="text-2xl font-semibold text-green-700 mb-6">My Crop Listings</h2>
+    <div className="container mx-auto py-8 px-4 relative">
+      {/* Back Arrow Button */}
+      <button
+        onClick={handleBackClick}
+        className="absolute top-4 left-4 text-green-600 hover:text-green-800 transition-colors"
+        aria-label="Go back"
+      >
+        <FontAwesomeIcon icon={faArrowLeft} size="lg" />
+      </button>
+
+      <h2 className="text-2xl font-semibold text-green-700 mb-6 text-center">
+        My Crop Listings
+      </h2>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {listings.map(listing => (
           <div key={listing.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">

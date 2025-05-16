@@ -19,7 +19,7 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Landing/>} />
+        <Route path="/" element={<FarmerHomePage/>} />
         <Route path="/signin" element={<SignIn />} />
         <Route path="/register/farmer" element={<FarmerRegistrationForm />} />
         <Route path="/register/buyer" element={<BuyerRegistrationForm />} />
