@@ -259,8 +259,6 @@ function UploadCropFormSimplified() {
                 navigate(listingsurl); // Redirect to the proper URL with email query param
             });
 
-
-
             // Reset form -  moved inside the success callback to ensure it happens after redirection if it occurs
             setCropName('');
             setQuantity('');

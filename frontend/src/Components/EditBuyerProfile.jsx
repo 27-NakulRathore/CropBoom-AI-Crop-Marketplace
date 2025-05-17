@@ -5,8 +5,9 @@ import { faArrowLeft, faUserEdit, faMapMarkerAlt, faPhone } from '@fortawesome/f
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-function EditBuyerProfile() {
+function EditUserProfile() {
   const navigate = useNavigate();
+  const [role, setRole] = useState('');
   const [buyer, setBuyer] = useState({ 
     name: '', 
     email: '', 
@@ -28,36 +29,40 @@ function EditBuyerProfile() {
     address: ''
   });
 
-  useEffect(() => {
-    const email = localStorage.getItem("email");
-    if (!email) {
-      setError("Email not found in localStorage. Please sign in.");
-      setLoading(false);
-      return;
-    }
+ useEffect(() => {
+  const email = localStorage.getItem("email");
+  const userRole = localStorage.getItem("role");
+  setRole(userRole); // <-- This sets the state
 
-    fetch(`http://localhost:8080/api/buyer/${email}`)
-      .then(res => {
-        if (!res.ok) {
-          throw new Error('Failed to fetch buyer: ${res.status}');
-        }
-        return res.json();
-      })
-      .then(data => {
-        setBuyer(data);
-        setUpdatedBuyer({
-          name: data.name || '',
-          email: data.email || '',
-          phone: data.contactNumber || '',
-          address: data.address || ''
-        });
-        setLoading(false);
-      })
-      .catch(err => {
-        setError(err.message);
-        setLoading(false);
+  if (!email || !userRole) {
+    setError("Email or role not found in localStorage. Please sign in.");
+    setLoading(false);
+    return;
+  }
+
+  fetch(`http://localhost:8080/api/${userRole}/${email}`)
+    .then(res => {
+      if (!res.ok) {
+        throw new Error(`Failed to fetch profile: ${res.status}`);
+      }
+      return res.json();
+    })
+    .then(data => {
+      setBuyer(data);
+      setUpdatedBuyer({
+        name: data.name || '',
+        email: data.email || '',
+        phone: data.contactNumber || '',
+        address: data.address || ''
       });
-  }, []);
+      setLoading(false);
+    })
+    .catch(err => {
+      setError(err.message);
+      setLoading(false);
+    });
+}, []);
+
 
   const validateForm = () => {
     const errors = {};
@@ -112,7 +117,7 @@ function EditBuyerProfile() {
     if (!validateForm()) return;
 
     const email = localStorage.getItem("email");
-    fetch(`http://localhost:8080/api/buyer/${email}`, {
+      fetch(`http://localhost:8080/api/${role}/${email}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -140,7 +145,9 @@ function EditBuyerProfile() {
           pauseOnHover: true,
           draggable: true,
         });
-        navigate('/buyer/profile'); // ✅ redirect to profile view page
+        localStorage.setItem("role", data.role);
+        localStorage.setItem("email",data.email);
+        navigate(`/${role}/profile`); // ✅ redirect to profile view page
       })
       .catch(error => {
         console.error('Error updating profile:', error);
@@ -190,7 +197,10 @@ function EditBuyerProfile() {
               <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
               Back
             </button>
-            <h2 className="text-xl font-bold">My Profile</h2>
+            <h2 className="text-xl font-bold">
+              {role === 'farmer' ? 'Farmer Profile' : 'Buyer Profile'}
+            </h2>
+
             {!editMode && (
               <button 
                 onClick={handleEditToggle}
@@ -333,4 +343,4 @@ function EditBuyerProfile() {
   );
 }
 
-export default EditBuyerProfile;
+export default EditUserProfile;

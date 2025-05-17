@@ -21,7 +21,7 @@ useEffect(() => {
         const rawCart = JSON.parse(localStorage.getItem(`cart-${email}`)) || [];
 
         try {
-            const response = await fetch('http://localhost:8080/api/crops'); // Update this to your correct API
+            const response = await fetch('http://localhost:8080/api/crops/crops'); // Update this to your correct API
             const cropsFromServer = await response.json();
 
             const mergedCart = rawCart.map(cartItem => {
@@ -34,7 +34,8 @@ useEffect(() => {
                         unit: crop.unit || 'kg',
                         cropImage: crop.cropImage || '',
                         farmer: crop.farmer || { name: 'Unknown Farmer' },
-                        cartQuantity: cartItem.cartQuantity || 1
+                        cartQuantity: cartItem.cartQuantity || 1,
+                        availableQuantity: crop.quantity || 0
                     };
                 } else {
                     return {
@@ -199,7 +200,7 @@ const calculateTotal = () => {
                                                 type="number"
                                                 id={`qty-${item.id}`}
                                                 min="1"
-                                                max={item.availableQuantity || 1000000} // Use actual max available quantity
+                                                max={item.availableQuantity} // Use actual max available quantity
                                                 value={item.cartQuantity}
                                                 onChange={(e) => {
                                                 let val = parseInt(e.target.value, 10);

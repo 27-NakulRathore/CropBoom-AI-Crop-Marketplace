@@ -19,90 +19,114 @@ function BuyNowPage() {
     const [paymentMethod, setPaymentMethod] = useState('cash_on_delivery');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [cartTotal, setCartTotal] = useState(null);
 
-
-   useEffect(() => {
-    const searchParams = new URLSearchParams(location.search);
-    const cropId = searchParams.get('cropId');
-
-    const fetchCropDetails = async (id) => {
-        try {
-            const response = await fetch(`http://localhost:8080/api/crops/${id}`);
-            if (!response.ok) throw new Error('Failed to fetch crop details');
-            const data = await response.json();
-            setCrops([data]);
-
-            // Set quantity to 1 for Buy Now case
-            setQuantities({ [data.id]: 1 });
-        } catch (err) {
-            console.error('Error fetching crop:', err);
-            setError('Failed to load crop details');
-        } finally {
-            setLoading(false);
-        }
+    const unitConversionToKg = {
+        kg: 1,
+        quintal: 100,
+        ton: 1000
     };
 
-    if (cropId) {
-        fetchCropDetails(cropId);
-    } else if (location.state?.cartItems?.length > 0) {
-        setCrops(location.state.cartItems);
+    useEffect(() => {
+        const searchParams = new URLSearchParams(location.search);
+        const cropId = searchParams.get('cropId');
 
-        // Initialize quantities based on selected quantity from cart
-        const initialQuantities = {};
-        location.state.cartItems.forEach(item => {
-            initialQuantities[item.id] = item.selectedQuantity || item.quantity || 1;
-        });
-        setQuantities(initialQuantities);
+        const fetchCropDetails = async (id) => {
+            try {
+                const response = await fetch(`http://localhost:8080/api/crops/${id}`);
+                if (!response.ok) throw new Error('Failed to fetch crop details');
+                const data = await response.json();
+                setCrops([data]);
+                setQuantities({ [data.id]: 1 });
+            } catch (err) {
+                console.error('Error fetching crop:', err);
+                setError('Failed to load crop details');
+            } finally {
+                setLoading(false);
+            }
+        };
 
-        // Set total from cart if provided
-        if (location.state.total) {
-            setCartTotal(location.state.total);  // <-- This requires a new state: const [cartTotal, setCartTotal] = useState(null);
+        if (cropId) {
+            fetchCropDetails(cropId);
+        } else if (location.state?.cartItems?.length > 0) {
+            setCrops(location.state.cartItems);
+            const initialQuantities = {};
+            location.state.cartItems.forEach(item => {
+                initialQuantities[item.id] = item.selectedQuantity || item.quantity || 1;
+            });
+            setQuantities(initialQuantities);
+            setLoading(false);
+        } else {
+            setError('No crop or cart data provided');
+            setLoading(false);
+        }
+    }, [location.search, location.state]);
+
+    const calculateTotal = () => {
+    return crops.reduce((sum, item) => {
+        const quantity = quantities[item.id] || 1;
+
+        let numericPrice = 0;
+
+        if (item.price && item.price > 0) {
+            numericPrice = item.price;
+        } else if (item.priceRange) {
+            const parts = item.priceRange.split('-').map(p => parseFloat(p));
+            if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+                numericPrice = (parts[0] + parts[1]) / 2;
+            }
         }
 
-        setLoading(false);
-    } else {
-        setError('No crop or cart data provided');
-        setLoading(false);
-    }
-}, [location.search, location.state]);
+        return sum + numericPrice * quantity;
+    }, 0).toFixed(2);
+    };
 
 
     const handleSubmit = async (e) => {
-        e.preventDefault();
+    e.preventDefault();
 
-        const buyerEmail = localStorage.getItem('email');
-        if (!buyerEmail) {
-            alert('Buyer not authenticated');
-            return;
-        }
+    const buyerEmail = localStorage.getItem('email');
+    if (!buyerEmail) {
+        alert('Buyer not authenticated');
+        return;
+    }
 
-        try {
-            for (const crop of crops) {
-                const unit = crop.unit.toLowerCase();
-                const conversionFactor = unitConversionToKg[unit] || 1;
-                const quantityInKg = (quantities[crop.id] || 1) * conversionFactor;
-                const orderData = {
-                    cropId: crop.id,
-                    farmerId: crop.farmer.id,
-                    quantity: quantityInKg, // always send in kg
-                    totalPrice: quantityInKg * crop.price,
-                    deliveryAddress,
-                    deliveryDate,
-                    paymentMethod,
-                    buyerEmail
-                };
+    try {
+        const orders = crops.map(crop => {
+            const unit = crop.unit.toLowerCase();
+            const conversionFactor = unitConversionToKg[unit] || 1;
+            const quantityInKg = (quantities[crop.id] || 1) * conversionFactor;
 
-                const response = await fetch('http://localhost:8080/api/orders', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(orderData),
-                });
+            let price = (crop.price !== null && crop.price !== undefined) ? crop.price : crop.priceRange;
+            let numericPrice = 0;
 
-                if (!response.ok) throw new Error('Order failed');
+            if (typeof price === 'string') {
+                const parts = price.split('-').map(p => parseFloat(p));
+                numericPrice = parts.length === 2
+                    ? (parts[0] + parts[1]) / 2
+                    : parseFloat(price);
+            } else {
+                numericPrice = price || 0;
             }
+
+            return {
+                cropId: crop.id,
+                farmerId: crop.farmer.id,
+                quantity: quantityInKg,
+                totalPrice: quantityInKg * numericPrice,
+                deliveryAddress,
+                deliveryDate,
+                paymentMethod,
+                buyerEmail
+            };
+        });
+
+            const response = await fetch('http://localhost:8080/api/orders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orders }),  // Wrap in object
+            });
+
+            if (!response.ok) throw new Error('Order failed');
 
             navigate('/buyer/orders', { state: { success: true } });
         } catch (err) {
@@ -110,6 +134,7 @@ function BuyNowPage() {
             alert('Failed to place orders. Please try again.');
         }
     };
+
 
     if (loading) {
         return (
@@ -131,26 +156,6 @@ function BuyNowPage() {
             </div>
         );
     }
-
-    const unitConversionToKg = {
-    kg: 1,
-    quintal: 100,
-    ton: 1000
-    };
-
-    
-const totalPrice = crops.reduce((sum, crop) => {
-    const quantity = parseFloat(quantities[crop.id]) || 1;  // Use selected quantity
-    const price = parseFloat(crop.price);
-    if (!isNaN(quantity) && !isNaN(price)) {
-        return sum + quantity * price;
-    }
-    return sum;
-}, 0);
-
-
-
-
 
     return (
         <div className="min-h-screen bg-green-50">
@@ -188,37 +193,52 @@ const totalPrice = crops.reduce((sum, crop) => {
                                         <h3 className="font-bold">{crop.cropName}</h3>
                                         <p className="text-sm text-gray-600">Sold by: {crop.farmer.name}</p>
                                         <p className="text-sm text-gray-600">Location: {crop.address}</p>
-                                        <p className="text-sm">Price per {crop.unit}: ₹{crop.price}</p>
+                                        {(!crop.price || crop.price <= 0) && !crop.priceRange ? (
+                                            '⚠️ Price not available'
+                                        ) : (
+                                            `Price per ${crop.unit}: ₹${
+                                                crop.price > 0
+                                                    ? crop.price
+                                                    : (() => {
+                                                        const parts = crop.priceRange?.split('-').map(p => parseFloat(p));
+                                                        return parts && parts.length === 2
+                                                            ? ((parts[0] + parts[1]) / 2).toFixed(2)
+                                                            : crop.priceRange || 'N/A';
+                                                    })()
+                                            }`
+                                        )}
+
                                     </div>
                                 </div>
-                            <div className="mt-2 text-sm text-gray-700 flex items-center">
-                            <label htmlFor={`qty-${crop.id}`} className="mr-2 font-semibold">Quantity:</label>
-                            <input
-                                type="number"
-                                id={`qty-${crop.id}`}
-                                min="1"
-                                max={crop.availableQuantity || 1000000} // use actual available quantity if provided
-                                value={quantities[crop.id] || 1}
-                                onChange={(e) => {
-                                let val = parseInt(e.target.value, 10);
-                                if (isNaN(val) || val < 1) val = 1;
-                                if (crop.availableQuantity && val > crop.availableQuantity) val = crop.availableQuantity;
-                                setQuantities(prev => ({ ...prev, [crop.id]: val }));
-                                }}
-                                className="border border-gray-300 rounded px-2 py-1 w-20"
-                            />
-                            <span className="ml-2">{crop.unit}</span>
-                            </div>
 
+                                <div className="mt-2 text-sm text-gray-700 flex items-center">
+                                    <label htmlFor={`qty-${crop.id}`} className="mr-2 font-semibold">Quantity:</label>
+                                    <input
+                                        type="number"
+                                        id={`qty-${crop.id}`}
+                                        min="1"
+                                        max={crop.availableQuantity}
+                                        value={quantities[crop.id] || 1}
+                                        onChange={(e) => {
+                                            let val = parseInt(e.target.value, 10);
+                                            if (isNaN(val) || val < 1) val = 1;
+                                            if (val > crop.availableQuantity) val = crop.availableQuantity;
+                                            setQuantities(prev => ({ ...prev, [crop.id]: val }));
+                                        }}
+                                        className="border border-gray-300 rounded px-2 py-1 w-20"
+                                    />
+                                    <span className="ml-2">{crop.unit}</span>
+                                </div>
 
-
+                                <p className="text-xs text-green-600 mt-1 ml-1">
+                                    Please confirm your quantity. Maximum available: {crop.availableQuantity} {crop.unit}.
+                                </p>
                             </div>
                         ))}
 
-                            <div className="mt-6 text-right text-lg font-semibold">
-                            Total: ₹{(cartTotal !== null ? cartTotal : totalPrice).toFixed(2)}
-                            </div>
-
+                        <div className="mt-6 text-right text-lg font-semibold">
+                            Total: ₹{calculateTotal()}
+                        </div>
                     </div>
 
                     <div className="bg-white p-6 rounded shadow">
@@ -289,7 +309,7 @@ const totalPrice = crops.reduce((sum, crop) => {
                             type="submit"
                             className="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-md font-medium transition duration-200"
                         >
-                            Confirm Purchase (₹{(cartTotal !== null ? cartTotal : totalPrice).toFixed(2)})
+                            Confirm Purchase (₹{calculateTotal()})
                         </button>
                     </div>
                 </form>

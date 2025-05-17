@@ -1,7 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUserCircle, faEdit, faMapMarkerAlt, faPhone, faBirthdayCake, faIdCard, faBriefcase } from '@fortawesome/free-solid-svg-icons';
+import {
+    faUserCircle,
+    faEdit,
+    faMapMarkerAlt,
+    faPhone,
+    faBirthdayCake,
+    faIdCard,
+    faBriefcase
+} from '@fortawesome/free-solid-svg-icons';
 
 function BuyerProfile() {
     const navigate = useNavigate();
@@ -33,7 +41,7 @@ function BuyerProfile() {
     }, []);
 
     const handleEditProfile = () => {
-        navigate('/buyer/profile/edit');
+        navigate('/edit-profile/buyer'); // <- Corrected route
     };
 
     if (loading) {
@@ -109,7 +117,7 @@ function BuyerProfile() {
                                     Edit Profile
                                 </button>
                                 <Link
-                                    to="http://localhost:5173/BuyerHomePage"
+                                    to="/BuyerHomePage"
                                     className="inline-flex items-center ml-2 px-4 py-2 bg-gray-300 border border-transparent rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition ease-in-out duration-150"
                                 >
                                     Back to Home

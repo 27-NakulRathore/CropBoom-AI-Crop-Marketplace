@@ -32,7 +32,7 @@ function BuyerProfile() {
 
     useEffect(() => {
         const email = localStorage.getItem("email");
-        console.log("Email from localStorage:", email);
+        console.log("Email from localStorage[BuyerHomePage]:", email);
         if (email) {
             fetch(`http://localhost:8080/api/buyer/${email}`)
                 .then(res => res.json())
@@ -142,7 +142,7 @@ function BuyerProfile() {
         <div className="min-h-screen bg-green-50 flex flex-col">
             <header className="bg-white shadow px-6 py-4">
                 <div className="flex justify-between items-center">
-                    <Link to="/buyer/home" className="text-green-700 font-bold text-2xl flex items-center hover:opacity-80">
+                    <Link to="/" className="text-green-700 font-bold text-2xl flex items-center hover:opacity-80">
                         <FontAwesomeIcon icon={faLeaf} className="mr-2 text-green-600 animate-pulse" />
                         CropBoom
                     </Link>
