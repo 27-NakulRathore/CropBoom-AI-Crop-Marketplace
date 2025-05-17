@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+
 import Landing from './Components/Landing';
 import SignIn from './Components/SignIn';
 import FarmerRegistrationForm from './Components/FarmerRegistrationForm';
@@ -10,30 +11,42 @@ import UploadCropForm from './Components/UploadCropForm';
 import MyCropListings from './Components/MyCropListings';
 import BuyerCart from './Components/BuyerCart';
 import BuyNowPage from './Components/BuyNowPage'; // Import BuyNowPage
-import BuyerProfile from './Components/BuyerProfile'; // Adjust path if needed
-import EditBuyerProfile from './Components/EditBuyerProfile'; // Adjust path if needed
+import BuyerProfile from './Components/BuyerProfile';
+import EditBuyerProfile from './Components/EditBuyerProfile';
 import BuyerOrders from './Components/BuyerOrders';
 import BookingsPage from './Components/BookingsPage';
+import FarmerProfile from './Components/FarmerProfile'; // add this import as it is used below
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<FarmerHomePage/>} />
+        <Route path="/" element={<Landing />} />
         <Route path="/signin" element={<SignIn />} />
+
+        {/* Registration */}
         <Route path="/register/farmer" element={<FarmerRegistrationForm />} />
         <Route path="/register/buyer" element={<BuyerRegistrationForm />} />
-        <Route path="/BuyerHomePage" element={<BuyerHomePage />} /> {/* Route for BuyerHomePage */}
-        <Route path="/FarmerHomePage" element={<FarmerHomePage />} /> {/* Route for FarmerHomePage */}
-        <Route path="/farmer/upload-crop" element={<UploadCropForm />} /> {/* Example route */}
-        <Route path="/farmer/crop-listings" element={<MyCropListings/>} />
+
+        {/* Home pages */}
+        <Route path="/BuyerHomePage" element={<BuyerHomePage />} />
+        <Route path="/FarmerHomePage" element={<FarmerHomePage />} />
+
+        {/* Farmer routes */}
+        <Route path="/farmer/upload-crop" element={<UploadCropForm />} />
+        <Route path="/farmer/crop-listings" element={<MyCropListings />} />
+        <Route path="/farmer/bookings" element={<BookingsPage />} />
+        <Route path="/farmer/profile" element={<FarmerProfile />} />
+
+        {/* Buyer routes */}
         <Route path="/buyer/cart" element={<BuyerCart />} />
-        <Route path="/buyer/checkout" element={<BuyNowPage />} /> {/* mention route in app.jsx also */}
+        <Route path="/buyer/checkout" element={<BuyNowPage />} />
         <Route path="/buyer/profile" element={<BuyerProfile />} />
         <Route path="/buyer/profile/edit" element={<EditBuyerProfile />} />
-        <Route path="/buyer/orders" element={<BuyerOrders />} /> {/* Route for BuyerOrders */}
-        <Route path="/farmer/bookings" element={<BookingsPage />} /> {/* Route for BookingsPage */}
-        {/* Add other routes here as needed */}
+        <Route path="/buyer/orders" element={<BuyerOrders />} />
+
+        {/* Common edit profile route with role param */}
+        <Route path="/edit-profile/:role" element={<EditBuyerProfile />} />
       </Routes>
     </BrowserRouter>
   );

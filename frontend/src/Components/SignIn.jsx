@@ -82,6 +82,8 @@ function SignInForm() {
                     // ✅ Store email in localStorage
                     localStorage.setItem("email", data.email);
                     console.log("Saved email to localStorage:", localStorage.getItem("email"));
+                    localStorage.setItem("role", data.role);
+                    console.log("Saved Role to localStorage:", localStorage.getItem("role"));
                     
                     toast.success('Login successful!', {
                         position: "top-right",

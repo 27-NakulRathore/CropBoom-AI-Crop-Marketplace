@@ -119,8 +119,8 @@ function MyCropListings() {
   if (error) {
     return (
       <div className="p-6 text-center text-red-500">
-        Error: {error}
-        <Link to="/" className="block text-blue-500 mt-2">Return to Home</Link>
+        Error: Oops!, here is some issue while loading your listings. Please try again later.
+        <Link to="/FarmerHomePage" className="block text-blue-500 mt-2">Return to Home</Link>
       </div>
     );
   }

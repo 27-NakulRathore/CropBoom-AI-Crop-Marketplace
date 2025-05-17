@@ -2,47 +2,100 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faCalendarCheck, faCheckCircle, faTimesCircle, faTruck, faMoneyBillWave } from '@fortawesome/free-solid-svg-icons';
+import axios from 'axios';
 
 const BookingsPage = () => {
   const location = useLocation();
   const email = location.state?.email;
-  
-  // Sample booking data - in a real app, this would come from your API
-  const [bookings, setBookings] = useState([
-    {
-      id: 1,
-      cropName: 'Organic Wheat',
-      quantity: 50,
-      unit: 'kg',
-      buyerName: 'John Doe',
-      buyerEmail: 'john@example.com',
-      buyerPhone: '9876543210',
-      bookingDate: '2023-06-15',
-      status: 'confirmed',
-      price: '₹22-25/kg',
-      deliveryAddress: '123 Farm St, Agricultural Area, Farmland 560001',
-      paymentStatus: 'paid'
-    },
-    {
-      id: 2,
-      cropName: 'Basmati Rice',
-      quantity: 2,
-      unit: 'quintal',
-      buyerName: 'Jane Smith',
-      buyerEmail: 'jane@example.com',
-      buyerPhone: '9876543211',
-      bookingDate: '2023-06-18',
-      status: 'pending',
-      price: '₹40-45/kg',
-      deliveryAddress: '456 Grain Ave, Crop City 560002',
-      paymentStatus: 'pending'
-    },
-  ]);
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // In a real app, you would fetch bookings from your API
   useEffect(() => {
-    // fetchBookings(email);
+    const fetchBookings = async () => {
+      try {
+        const response = await axios.get(`http://localhost:8080/api/bookings/farmer/${email}`);
+        setBookings(response.data);
+        setLoading(false);
+      } catch (err) {
+        setError(err.message);
+        setLoading(false);
+        // Fallback to sample data if API fails
+        setBookings([
+          {
+            id: 1,
+            cropName: 'Organic Wheat',
+            quantity: 50,
+            unit: 'kg',
+            buyerName: 'John Doe',
+            buyerEmail: 'john@example.com',
+            buyerPhone: '9876543210',
+            bookingDate: '2023-06-15',
+            status: 'confirmed',
+            price: '₹22-25/kg',
+            deliveryAddress: '123 Farm St, Agricultural Area, Farmland 560001',
+            paymentStatus: 'paid'
+          },
+          {
+            id: 2,
+            cropName: 'Basmati Rice',
+            quantity: 2,
+            unit: 'quintal',
+            buyerName: 'Jane Smith',
+            buyerEmail: 'jane@example.com',
+            buyerPhone: '9876543211',
+            bookingDate: '2023-06-18',
+            status: 'pending',
+            price: '₹40-45/kg',
+            deliveryAddress: '456 Grain Ave, Crop City 560002',
+            paymentStatus: 'pending'
+          },
+        ]);
+      }
+    };
+
+    if (email) {
+      fetchBookings();
+    }
   }, [email]);
+
+  const handleDelivery = async (bookingId) => {
+    try {
+      await axios.put(`http://localhost:8080/api/bookings/${bookingId}/status`, null, {
+        params: { status: 'confirmed' }
+      });
+      setBookings(bookings.map(booking => 
+        booking.id === bookingId ? { ...booking, status: 'confirmed' } : booking
+      ));
+    } catch (err) {
+      console.error("Failed to update delivery status:", err);
+    }
+  };
+
+  const handlePayment = async (bookingId) => {
+    try {
+      await axios.put(`http://localhost:8080/api/bookings/${bookingId}/payment`, null, {
+        params: { paymentStatus: 'paid' }
+      });
+      setBookings(bookings.map(booking => 
+        booking.id === bookingId ? { ...booking, paymentStatus: 'paid' } : booking
+      ));
+    } catch (err) {
+      console.error("Failed to update payment status:", err);
+    }
+  };
+
+  if (loading) return (
+    <div className="min-h-screen bg-green-50 flex items-center justify-center">
+      <div className="text-green-700 text-xl">Loading bookings...</div>
+    </div>
+  );
+
+  if (error) return (
+    <div className="min-h-screen bg-green-50 flex items-center justify-center">
+      <div className="text-red-600 text-xl">Error: {error}. Using sample data.</div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-green-50">
@@ -130,10 +183,22 @@ const BookingsPage = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button className="text-green-600 hover:text-green-900 mr-4">
+                      <button 
+                        onClick={() => handleDelivery(booking.id)}
+                        disabled={booking.status === 'confirmed'}
+                        className={`mr-4 ${booking.status === 'confirmed' 
+                          ? 'text-gray-400 cursor-not-allowed' 
+                          : 'text-green-600 hover:text-green-900'}`}
+                      >
                         <FontAwesomeIcon icon={faTruck} className="mr-1" /> Delivery
                       </button>
-                      <button className="text-blue-600 hover:text-blue-900">
+                      <button 
+                        onClick={() => handlePayment(booking.id)}
+                        disabled={booking.paymentStatus === 'paid'}
+                        className={booking.paymentStatus === 'paid' 
+                          ? 'text-gray-400 cursor-not-allowed' 
+                          : 'text-blue-600 hover:text-blue-900'}
+                      >
                         <FontAwesomeIcon icon={faMoneyBillWave} className="mr-1" /> Payment
                       </button>
                     </td>

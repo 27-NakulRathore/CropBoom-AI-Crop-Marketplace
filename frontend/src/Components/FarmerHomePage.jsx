@@ -1,7 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTractor, faSignOutAlt, faCloudUpload, faListAlt, faArrowRight, faUserCircle, faCog, faShoppingBag } from '@fortawesome/free-solid-svg-icons';
+import {
+  faTractor,
+  faSignOutAlt,
+  faCloudUpload,
+  faListAlt,
+  faArrowRight,
+  faUserCircle,
+  faCog,
+  faShoppingBag,
+  faBoxOpen  // ✅ Missing import added here
+} from '@fortawesome/free-solid-svg-icons';
 import PropTypes from 'prop-types';
 
 function FarmerHomePage() {
@@ -10,41 +20,52 @@ function FarmerHomePage() {
   const dropdownRef = useRef(null);
   const location = useLocation();
   const email = location.state?.email || 'Farmer'; // Default fallback
- 
- const listingsurl=`/farmer/crop-listings?email=${encodeURIComponent(email)}`;
-  const handleLogout = () => {
-    setIsDropdownOpen(false);
-    navigate('/');
-  };
+  const [farmer, setFarmer] = useState(null);
+    
+  useEffect(() => {
+    const email = localStorage.getItem("email");
+    if (email) {
+        fetch(`http://localhost:8080/api/farmer/${email}`)
+            .then(res => res.json())
+            .then(data => setFarmer(data))
+            .catch(err => console.error("Failed to load farmer", err));
+    }
+  }, []);
+
+  const listingsurl = `/farmer/crop-listings?email=${encodeURIComponent(email)}`;
 
   const handleEditProfile = () => {
     setIsDropdownOpen(false);
     navigate('/farmer/profile/edit');
   };
 
-  const toggleDropdown = (event) => {
-    event.preventDefault();
-    setIsDropdownOpen(!isDropdownOpen);
-  };
+  const toggleDropdown = () => setIsDropdownOpen(!isDropdownOpen);
 
   const handleClickOutside = (event) => {
     if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-      setIsDropdownOpen(false);
+        setIsDropdownOpen(false);
     }
   };
 
   useEffect(() => {
     document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const handleLogout = () => {
+    const email = localStorage.getItem("email");
+    if (email) {
+        localStorage.removeItem(`cart-${email}`); // Optional for farmer
+        localStorage.removeItem("email");
+    }
+    navigate("/signin");
+  };
 
   return (
     <div className="min-h-screen bg-green-50 flex flex-col">
       {/* Header */}
       <header className="bg-white shadow-md py-4 px-6 flex items-center justify-between">
-        <Link to="/farmer/dashboard" className="flex items-center text-green-700 font-bold text-xl hover:opacity-80">
+        <Link to="/" className="flex items-center text-green-700 font-bold text-xl hover:opacity-80">
           <FontAwesomeIcon icon={faTractor} size="lg" className="mr-2" />
           CropBoom
         </Link>
@@ -60,47 +81,26 @@ function FarmerHomePage() {
         </div>
 
         <div className="relative" ref={dropdownRef}>
-          <button 
-            onClick={toggleDropdown} 
-            className="focus:outline-none"
-            aria-label="User menu"
-            aria-haspopup="true"
-            aria-expanded={isDropdownOpen}
-          >
-            <FontAwesomeIcon 
-              icon={faUserCircle} 
-              size="2x" 
-              className="text-gray-600 hover:text-gray-800 cursor-pointer" 
-            />
+          <button onClick={toggleDropdown} className="flex items-center">
+            <FontAwesomeIcon icon={faUserCircle} size="lg" className="text-gray-600 hover:text-gray-800" />
+            <span className="ml-2 hidden md:inline">{farmer?.name || 'Farmer'}</span>
           </button>
+
           {isDropdownOpen && (
-            <div 
-              className="absolute top-full right-0 mt-2 w-40 bg-white rounded-md shadow-lg z-10"
-              role="menu"
-            >
-              <Link
-                to="/farmer/profile"
-                className="block py-2 px-4 text-gray-700 hover:bg-gray-100"
-                onClick={() => setIsDropdownOpen(false)}
-                role="menuitem"
-              >
+            <div className="absolute right-0 mt-2 w-56 bg-white shadow-lg rounded-md z-50 overflow-hidden">
+              <div className="px-4 py-3 border-b">
+                <p className="font-medium">{farmer?.name || 'User'}</p>
+                <p className="text-sm text-gray-600 truncate">{farmer?.email || ''}</p>
+              </div>
+              <Link to="/farmer/profile" className="block px-4 py-2 hover:bg-gray-100 text-gray-700">
                 <FontAwesomeIcon icon={faUserCircle} className="mr-2" />
-                View Profile
+                My Profile
               </Link>
-              <Link
-                to="/farmer/profile/edit"
-                className="block py-2 px-4 text-gray-700 hover:bg-gray-100"
-                onClick={handleEditProfile}
-                role="menuitem"
-              >
-                <FontAwesomeIcon icon={faCog} className="mr-2" />
-                Edit Profile
+              <Link to="/farmer/products" className="block px-4 py-2 hover:bg-gray-100 text-gray-700">
+                <FontAwesomeIcon icon={faBoxOpen} className="mr-2" />
+                My Crops
               </Link>
-              <button
-                onClick={handleLogout}
-                className="block py-2 px-4 text-gray-700 hover:bg-gray-100 w-full text-left focus:outline-none"
-                role="menuitem"
-              >
+              <button onClick={handleLogout} className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-700 border-t">
                 <FontAwesomeIcon icon={faSignOutAlt} className="mr-2" />
                 Logout
               </button>

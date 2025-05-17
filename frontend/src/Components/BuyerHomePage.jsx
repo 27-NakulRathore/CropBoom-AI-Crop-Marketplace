@@ -1,6 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
 import {
     faLeaf,
     faSignOutAlt,
@@ -29,7 +32,7 @@ function BuyerProfile() {
 
     useEffect(() => {
         const email = localStorage.getItem("email");
-        console.log("Email from localStorage:", email);
+        console.log("Email from localStorage[BuyerHomePage]:", email);
         if (email) {
             fetch(`http://localhost:8080/api/buyer/${email}`)
                 .then(res => res.json())
@@ -93,13 +96,21 @@ function BuyerProfile() {
     };
 
 
-
-    const handleEditProfile = () => {
-        navigate('/buyer/profile/edit');
-    };
-
     const handleAddToCart = (crop) => {
         const email = localStorage.getItem('email');
+
+        if (!email) {
+            toast.error("You must be logged in to add items to the cart.", {
+                position: "top-right",
+                autoClose: 1000,
+                hideProgressBar: false,
+                closeOnClick: true,
+                pauseOnHover: true,
+                draggable: true,
+            });
+            return;
+        }
+
         const existingCart = JSON.parse(localStorage.getItem(`cart-${email}`)) || [];
         const existingItemIndex = existingCart.findIndex(item => item.id === crop.id);
 
@@ -111,8 +122,17 @@ function BuyerProfile() {
 
         localStorage.setItem(`cart-${email}`, JSON.stringify(existingCart));
         setCartCount(existingCart.reduce((total, item) => total + (item.cartQuantity || 1), 0));
-        alert(`${crop.cropName} added to cart`);
+
+        toast.success(`${crop.cropName} added to cart`, {
+            position: "top-right",
+            autoClose: 1000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+        });
     };
+
     
     const handleBuyNow = (cropId) => {
         navigate(`/buyer/checkout?cropId=${cropId}`);
@@ -122,7 +142,7 @@ function BuyerProfile() {
         <div className="min-h-screen bg-green-50 flex flex-col">
             <header className="bg-white shadow px-6 py-4">
                 <div className="flex justify-between items-center">
-                    <Link to="/buyer/home" className="text-green-700 font-bold text-2xl flex items-center hover:opacity-80">
+                    <Link to="/" className="text-green-700 font-bold text-2xl flex items-center hover:opacity-80">
                         <FontAwesomeIcon icon={faLeaf} className="mr-2 text-green-600 animate-pulse" />
                         CropBoom
                     </Link>
@@ -193,10 +213,6 @@ function BuyerProfile() {
                                 <p className="text-gray-600">Browse and purchase fresh crops directly from farmers</p>
                             </div>
                         </div>
-                        <Link to="/buyer/cart" className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded flex items-center justify-center">
-                            <FontAwesomeIcon icon={faShoppingCart} className="mr-2" />
-                            View Cart
-                        </Link>
                     </div>
                 </div>
 
@@ -219,7 +235,9 @@ function BuyerProfile() {
                                 <div className="p-4">
                                     <div className="flex justify-between items-start mb-2">
                                         <div>
-                                            <p className="text-lg font-bold text-gray-800">₹{crop.price}/{crop.unit}</p>
+                                            <p className="text-lg font-bold text-gray-800">
+                                            ₹{crop.price ? crop.price : (crop.priceRange || 'N/A')}/{crop.unit || 'kg'}</p>
+
                                             <p className="text-sm text-gray-600">Available: {crop.quantity} {crop.unit}</p>
                                         </div>
                                     </div>
@@ -242,6 +260,8 @@ function BuyerProfile() {
             <footer className="text-center text-gray-500 py-4 text-sm bg-gray-100">
                 © {new Date().getFullYear()} CropBoom. All rights reserved.
             </footer>
+
+            <ToastContainer />
         </div>
     );
 }

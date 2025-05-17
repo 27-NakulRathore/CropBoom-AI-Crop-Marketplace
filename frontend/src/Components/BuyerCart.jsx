@@ -13,17 +13,70 @@ function CartPage() {
     const [cartItems, setCartItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
+    const [cartTotal, setCartTotal] = useState(0);
 
-    useEffect(() => {
-        const cart = JSON.parse(localStorage.getItem('cart')) || [];
-        setCartItems(cart);
-        setLoading(false);
-    }, []);
+useEffect(() => {
+    const fetchCartWithCropDetails = async () => {
+        const email = localStorage.getItem('email');
+        const rawCart = JSON.parse(localStorage.getItem(`cart-${email}`)) || [];
+
+        try {
+            const response = await fetch('http://localhost:8080/api/crops/crops'); // Update this to your correct API
+            const cropsFromServer = await response.json();
+
+            const mergedCart = rawCart.map(cartItem => {
+                const crop = cropsFromServer.find(c => c.id === cartItem.id);
+                if (crop) {
+                    return {
+                        ...cartItem,
+                        cropName: crop.cropName,
+                        price: parseFloat(crop.pricePerKg) || 0,
+                        unit: crop.unit || 'kg',
+                        cropImage: crop.cropImage || '',
+                        farmer: crop.farmer || { name: 'Unknown Farmer' },
+                        cartQuantity: cartItem.cartQuantity || 1,
+                        availableQuantity: crop.quantity || 0
+                    };
+                } else {
+                    return {
+                        ...cartItem,
+                        cropName: cartItem.cropName || 'Unknown',
+                        price: 0,
+                        unit: 'kg',
+                        farmer: { name: 'Unknown Farmer' }
+                    };
+                }
+            });
+
+            setCartItems(mergedCart);
+        } catch (err) {
+            console.error("Failed to fetch crops from server:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    fetchCartWithCropDetails();
+}, []);
+
+
+    const handleQuantityChange = (cropId, value) => {
+  let qty = parseInt(value, 10);
+  if (isNaN(qty) || qty < 1) qty = 1;
+  const maxQty = crops.find(crop => crop.id === cropId)?.availableQuantity || Infinity;
+  if (qty > maxQty) qty = maxQty;
+  
+  setQuantities(prev => ({
+    ...prev,
+    [cropId]: qty,
+  }));
+};
+
 
     const updateCart = (updatedCart) => {
-        localStorage.setItem('cart', JSON.stringify(updatedCart));
+        const email = localStorage.getItem('email');
+        localStorage.setItem(`cart-${email}`, JSON.stringify(updatedCart));
         setCartItems(updatedCart);
-        // You might want to update the cart count in parent components here
     };
 
     const removeItem = (itemId) => {
@@ -33,21 +86,49 @@ function CartPage() {
 
     const updateQuantity = (itemId, newQuantity) => {
         if (newQuantity < 1) return;
-        
-        const updatedCart = cartItems.map(item => 
+
+        const updatedCart = cartItems.map(item =>
             item.id === itemId ? { ...item, cartQuantity: newQuantity } : item
         );
         updateCart(updatedCart);
     };
 
-    const calculateTotal = () => {
-        return cartItems.reduce(
-            (total, item) => total + (item.price * item.cartQuantity), 0
-        ).toFixed(2);
-    };
+const calculateTotal = () => {
+    return cartItems.reduce((sum, item) => {
+        const quantity = item.cartQuantity || 1;
+
+        // Handle both price and priceRange (like "100-120")
+        let price = item.price;
+        if (!price && item.priceRange) {
+            price = item.priceRange;
+        }
+
+        let numericPrice = 0;
+        if (typeof price === 'string') {
+            const parts = price.split('-').map(p => parseFloat(p));
+            if (parts.length === 2) {
+                numericPrice = (parts[0] + parts[1]) / 2; // average price
+            } else {
+                numericPrice = parseFloat(price);
+            }
+        } else {
+            numericPrice = price || 0;
+        }
+
+        return sum + numericPrice * quantity;
+    }, 0);
+};
+
+
 
     const handleCheckout = () => {
-        navigate('/buyer/checkout');
+        const total = calculateTotal(); // Calculate total price here
+        navigate('/buyer/checkout', { 
+            state: { 
+                cartItems: cartItems,       // array of selected crops
+                total: total                // Use the calculated total
+            } 
+        });
     };
 
     if (loading) {
@@ -97,11 +178,7 @@ function CartPage() {
                                     {cartItems.map((item) => (
                                         <div key={item.id} className="p-4 flex flex-col sm:flex-row">
                                             <div className="flex-shrink-0 mb-4 sm:mb-0 sm:mr-4">
-                                                <img
-                                                    src={`data:image/jpeg;base64,${item.cropImage}`}
-                                                    alt={item.cropName}
-                                                    className="w-24 h-24 object-cover rounded"
-                                                />
+                                                {/* Debugging: Check the cropImage */}
                                             </div>
                                             <div className="flex-grow">
                                                 <div className="flex justify-between">
@@ -115,29 +192,27 @@ function CartPage() {
                                                 </div>
                                                 <p className="text-sm text-gray-500 mb-2">Sold by: {item.farmer?.name || 'Local Farmer'}</p>
                                                 <p className="text-green-600 font-semibold mb-3">
-                                                    ₹{item.price}/{item.unit}
+                                                    ₹{item.price || item.priceRange || 'N/A'}/{item.unit || 'kg'}
                                                 </p>
                                                 <div className="flex items-center">
-                                                    <span className="text-sm text-gray-600 mr-3">Quantity:</span>
-                                                    <div className="flex items-center border border-gray-300 rounded">
-                                                        <button
-                                                            onClick={() => updateQuantity(item.id, item.cartQuantity - 1)}
-                                                            className="px-3 py-1 text-gray-600 hover:bg-gray-100"
-                                                            disabled={item.cartQuantity <= 1}
-                                                        >
-                                                            -
-                                                        </button>
-                                                        <span className="px-3 py-1 text-center min-w-[30px]">
-                                                            {item.cartQuantity}
-                                                        </span>
-                                                        <button
-                                                            onClick={() => updateQuantity(item.id, item.cartQuantity + 1)}
-                                                            className="px-3 py-1 text-gray-600 hover:bg-gray-100"
-                                                        >
-                                                            +
-                                                        </button>
-                                                    </div>
-                                                </div>
+                                            <label className="text-sm text-gray-600 mr-3" htmlFor={`qty-${item.id}`}>Quantity:</label>
+                                            <input
+                                                type="number"
+                                                id={`qty-${item.id}`}
+                                                min="1"
+                                                max={item.availableQuantity} // Use actual max available quantity
+                                                value={item.cartQuantity}
+                                                onChange={(e) => {
+                                                let val = parseInt(e.target.value, 10);
+                                                if (isNaN(val) || val < 1) val = 1;
+                                                if (item.availableQuantity && val > item.availableQuantity) val = item.availableQuantity;
+                                                updateQuantity(item.id, val);
+                                                }}
+                                                className="border border-gray-300 rounded px-3 py-1 w-20"
+                                            />
+                                            <span className="ml-2 text-gray-500 text-sm">{item.unit || 'kg'}</span>
+                                            </div>
+
                                             </div>
                                         </div>
                                     ))}
