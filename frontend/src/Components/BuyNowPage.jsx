@@ -120,11 +120,12 @@ function BuyNowPage() {
             };
         });
 
-            const response = await fetch('http://localhost:8080/api/orders', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ orders }),  // Wrap in object
-            });
+           const response = await fetch('http://localhost:8080/api/orders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(orders),  // ✅ Do NOT wrap in another object
+        });
+
 
             if (!response.ok) throw new Error('Order failed');
 
