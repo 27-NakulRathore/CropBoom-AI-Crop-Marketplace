@@ -11,6 +11,7 @@ function MyCropListings() {
   const [searchParams] = useSearchParams();
   const email = searchParams.get('email');
   const [confirmingSold, setConfirmingSold] = useState(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(null);
   const navigate = useNavigate();
 
   const handleBackClick = () => {
@@ -30,8 +31,6 @@ function MyCropListings() {
             headers: { 'Authorization': `Bearer ${token}` }
           }
         );
-
-        console.log("API Response:", response.data);
 
         const listingsWithData = response.data.map(listing => ({
           ...listing,
@@ -74,6 +73,7 @@ function MyCropListings() {
       });
 
       setListings(listings.filter(listing => listing.id !== id));
+      setConfirmingDelete(null);
     } catch (err) {
       console.error('Error deleting listing:', err);
       alert('Failed to delete listing. Please try again.');
@@ -85,7 +85,7 @@ function MyCropListings() {
       await axios.patch(
         `http://localhost:8080/api/crops/${id}/status`,
         { status: 'sold' },
-        { headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` } }
+        { headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }}
       );
 
       setListings(listings.map(listing =>
@@ -110,6 +110,14 @@ function MyCropListings() {
       console.error('Date formatting error:', e);
       return 'Invalid date';
     }
+  };
+
+  const handleViewListing = (listingId) => {
+    navigate(`/farmer/listings/${listingId}`, { state: { email } });
+  };
+
+  const handleEditListing = (listing) => {
+    navigate(`/farmer/listings/edit/${listing.id}`, { state: { listing, email } });
   };
 
   if (loading) {
@@ -227,29 +235,45 @@ function MyCropListings() {
               </div>
 
               <div className="mt-4 flex flex-wrap gap-2">
-                <Link 
-                  to={`/farmer/listings/${listing.id}`}
+                <button
+                  onClick={() => handleViewListing(listing.id)}
                   className="px-3 py-1 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 flex items-center text-sm"
                 >
                   <FontAwesomeIcon icon={faEye} className="mr-1" /> View
-                </Link>
+                </button>
 
                 {listing.status !== 'sold' && (
                   <>
-                    <Link
-                      to={`/farmer/listings/edit/${listing.id}`}
-                      state={{ listing }}
+                    <button
+                      onClick={() => handleEditListing(listing)}
                       className="px-3 py-1 bg-yellow-50 text-yellow-600 rounded-md hover:bg-yellow-100 flex items-center text-sm"
                     >
                       <FontAwesomeIcon icon={faEdit} className="mr-1" /> Edit
-                    </Link>
-
-                    <button
-                      onClick={() => handleDelete(listing.id)}
-                      className="px-3 py-1 bg-red-50 text-red-600 rounded-md hover:bg-red-100 flex items-center text-sm"
-                    >
-                      <FontAwesomeIcon icon={faTrash} className="mr-1" /> Delete
                     </button>
+
+                    {confirmingDelete === listing.id ? (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleDelete(listing.id)}
+                          className="px-3 py-1 bg-red-50 text-red-600 rounded-md hover:bg-red-100 flex items-center text-sm"
+                        >
+                          <FontAwesomeIcon icon={faTrash} className="mr-1" /> Confirm
+                        </button>
+                        <button
+                          onClick={() => setConfirmingDelete(null)}
+                          className="px-3 py-1 bg-gray-50 text-gray-600 rounded-md hover:bg-gray-100 text-sm"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmingDelete(listing.id)}
+                        className="px-3 py-1 bg-red-50 text-red-600 rounded-md hover:bg-red-100 flex items-center text-sm"
+                      >
+                        <FontAwesomeIcon icon={faTrash} className="mr-1" /> Delete
+                      </button>
+                    )}
 
                     {confirmingSold === listing.id ? (
                       <div className="flex gap-2">
