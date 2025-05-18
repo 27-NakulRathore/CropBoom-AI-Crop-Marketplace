@@ -16,6 +16,8 @@ import EditBuyerProfile from './Components/EditBuyerProfile';
 import BuyerOrders from './Components/BuyerOrders';
 import BookingsPage from './Components/BookingsPage';
 import FarmerProfile from './Components/FarmerProfile'; // add this import as it is used below
+import ViewListing from './Components/ViewListing';
+import EditListing from './Components/EditListing';
 
 function App() {
   return (
@@ -37,6 +39,8 @@ function App() {
         <Route path="/farmer/crop-listings" element={<MyCropListings />} />
         <Route path="/farmer/bookings" element={<BookingsPage />} />
         <Route path="/farmer/profile" element={<FarmerProfile />} />
+        <Route path="/farmer/listings/:id" element={<ViewListing />} />
+        <Route path="/farmer/listings/edit/:id" element={<EditListing />} />
 
         {/* Buyer routes */}
         <Route path="/buyer/cart" element={<BuyerCart />} />
