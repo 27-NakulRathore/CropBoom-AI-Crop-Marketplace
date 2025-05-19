@@ -18,6 +18,7 @@ import BookingsPage from './Components/BookingsPage';
 import FarmerProfile from './Components/FarmerProfile'; // add this import as it is used below
 import ViewListing from './Components/ViewListing';
 import EditListing from './Components/EditListing';
+import BuyerChat from './Components/BuyerChat'; 
 
 function App() {
   return (
@@ -48,6 +49,7 @@ function App() {
         <Route path="/buyer/profile" element={<BuyerProfile />} />
         <Route path="/buyer/profile/edit" element={<EditBuyerProfile />} />
         <Route path="/buyer/orders" element={<BuyerOrders />} />
+        <Route path="/buyer/chat" element={<BuyerChat/>} />
 
         {/* Common edit profile route with role param */}
         <Route path="/edit-profile/:role" element={<EditBuyerProfile />} />
