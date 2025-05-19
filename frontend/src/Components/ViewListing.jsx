@@ -22,16 +22,29 @@ function ViewListing() {
           headers: { 'Authorization': `Bearer ${token}` }
         });
 
+        if (!response.data) {
+          throw new Error('No data returned from server');
+        }
+
+        const data = response.data;
+
         const listingData = {
-          ...response.data,
-          listedOn: response.data.listedOn ? new Date(response.data.listedOn) : new Date(),
-          analysisDate: response.data.analysisDate ? new Date(response.data.analysisDate) : null,
-          imageUrl: response.data.imageData 
-            ? `data:image/jpeg;base64,${response.data.imageData}`
-            : null
+          ...data,
+          listedOn: data.listedOn ? new Date(data.listedOn) : new Date(),
+          analysisDate: data.analysisDate ? new Date(data.analysisDate) : null,
+          imageUrl: data.imageData
+            ? `data:image/jpeg;base64,${data.imageData}`
+            : (data.cropImage ? `data:image/jpeg;base64,${data.cropImage}` : null)
         };
 
+        console.log('Image data:', response.data.imageData);
+        console.log('Listing data:', listingData);
+
         setListing(listingData);
+
+        // // Safe logging after setting state
+        // console.log("Listing image URL:", listingData.imageUrl);
+
         setLoading(false);
       } catch (err) {
         console.error('Error fetching listing:', err);
@@ -44,7 +57,7 @@ function ViewListing() {
   }, [id]);
 
   const handleBackClick = () => {
-    navigate('/farmer/listings', { state: { email } });
+    navigate(-1);
   };
 
   const formatDate = (date) => {
@@ -111,6 +124,10 @@ function ViewListing() {
                 src={listing.imageUrl}
                 alt={listing.cropName}
                 className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = '/placeholder-crop.jpg';
+                }}
               />
             ) : (
               <div className="w-full h-64 bg-gray-100 flex items-center justify-center">
@@ -118,7 +135,7 @@ function ViewListing() {
               </div>
             )}
           </div>
-          
+
           <div className="p-6 md:w-1/2">
             <h1 className="text-2xl font-bold text-gray-800 mb-2">{listing.cropName}</h1>
             

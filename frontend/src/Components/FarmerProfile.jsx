@@ -92,7 +92,10 @@ function FarmerProfile() {
               <div className="py-4 flex items-center">
                 <FontAwesomeIcon icon={faMapMarkerAlt} className="mr-2 text-gray-700" />
                 <label className="block text-sm font-medium text-gray-700">Address:</label>
-                <p className="mt-1 ml-2 text-gray-900">{farmer?.address || 'N/A'}</p>
+                <p className="mt-1 ml-2 text-gray-900">
+  {farmer?.address || farmer?.location || 'N/A'}
+</p>
+
               </div>
               {farmer?.dob && (
                 <div className="py-4 flex items-center">
@@ -117,7 +120,7 @@ function FarmerProfile() {
                   Edit Profile
                 </button>
                 <Link
-                  to="/farmer/dashboard"
+                  to="/FarmerHomePage"
                   className="inline-flex items-center ml-2 px-4 py-2 bg-gray-300 border border-transparent rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition ease-in-out duration-150"
                 >
                   Back to Home

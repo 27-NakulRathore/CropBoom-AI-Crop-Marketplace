@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
+  faLeaf,
   faTractor,
   faSignOutAlt,
   faCloudUpload,
@@ -19,7 +20,7 @@ function FarmerHomePage() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
   const location = useLocation();
-  const email = location.state?.email || 'Farmer'; // Default fallback
+  const email = localStorage.getItem("email") || 'Farmer';
   const [farmer, setFarmer] = useState(null);
     
   useEffect(() => {
@@ -65,9 +66,9 @@ function FarmerHomePage() {
     <div className="min-h-screen bg-green-50 flex flex-col">
       {/* Header */}
       <header className="bg-white shadow-md py-4 px-6 flex items-center justify-between">
-        <Link to="/" className="flex items-center text-green-700 font-bold text-xl hover:opacity-80">
-          <FontAwesomeIcon icon={faTractor} size="lg" className="mr-2" />
-          CropBoom
+        <Link to="/" className="text-green-700 font-bold text-2xl flex items-center hover:opacity-80">
+              <FontAwesomeIcon icon={faLeaf} className="mr-2 text-green-600 animate-pulse" />
+                  CropBoom
         </Link>
 
         <div className="flex flex-col items-end">

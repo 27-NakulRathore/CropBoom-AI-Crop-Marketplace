@@ -77,7 +77,7 @@ function EditListing() {
         qualityRating: listing.qualityRating,
         address: listing.address,
         description: listing.description,
-        analysisDate: listing.analysisDate?.toISOString(),
+        analysisDate: listing.analysisDate ? listing.analysisDate.toISOString() : null,
       };
 
       await axios.put(
@@ -87,8 +87,13 @@ function EditListing() {
       );
 
       setSuccess(true);
+
+      // **Added this line to define updatedListing so it won't throw error**
+      const updatedListing = listing;
+
       setTimeout(() => {
-        navigate('/farmer/listings', { state: { email } });
+        navigate(-1);
+
       }, 1500);
     } catch (err) {
       console.error('Error updating listing:', err);
@@ -99,7 +104,7 @@ function EditListing() {
   };
 
   const handleBackClick = () => {
-    navigate('/farmer/listings', { state: { email } });
+    navigate(-1);
   };
 
   const formatDateForInput = (date) => {
