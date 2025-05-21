@@ -51,15 +51,30 @@ function BuyerOrders() {
                     return;
                 }
                 
-                const response = await fetch(`http://localhost:8080/api/orders/buyer/${email}`);
+                const response = await fetch(`http://localhost:8080/api/orders/buyer/${email}`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+                
                 if (!response.ok) throw new Error("Failed to fetch orders");
+                
                 const data = await response.json();
-                setOrders(data);
+                // Ensure data is an array and items exist for each order
+                const processedOrders = Array.isArray(data) ? 
+                    data.map(order => ({
+                        ...order,
+                        items: Array.isArray(order.items) ? order.items : [],
+                        deliveryAddress: order.deliveryAddress || {}
+                    })) : [];
+                
+                setOrders(processedOrders);
                 setLoading(false);
             } catch (err) {
                 console.error("Error fetching orders:", err);
-                setError("Failed to load orders");
+                setError(err.message || "Failed to load orders");
                 setLoading(false);
+                setOrders([]); // Ensure orders is always an array
             }
         };
         fetchOrders();
@@ -69,6 +84,7 @@ function BuyerOrders() {
 
     const handleLogout = () => {
         localStorage.removeItem('email');
+        localStorage.removeItem('token');
         navigate('/signin');
     };
 
@@ -92,8 +108,13 @@ function BuyerOrders() {
     };
 
     const formatDate = (dateString) => {
-        const options = { year: 'numeric', month: 'long', day: 'numeric' };
-        return new Date(dateString).toLocaleDateString(undefined, options);
+        if (!dateString) return 'N/A';
+        try {
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            return new Date(dateString).toLocaleDateString(undefined, options);
+        } catch {
+            return 'Invalid date';
+        }
     };
 
     return (
@@ -251,17 +272,17 @@ function BuyerOrders() {
                     ) : (
                         <div className="space-y-6">
                             {orders.map((order) => (
-                                <div key={order.id} className="border rounded-lg overflow-hidden">
+                                <div key={order.id || Math.random()} className="border rounded-lg overflow-hidden">
                                     <div className="bg-gray-50 px-6 py-4 border-b flex justify-between items-center">
                                         <div>
-                                            <span className="font-medium">Order #{order.id}</span>
+                                            <span className="font-medium">Order #{order.id || 'N/A'}</span>
                                             <span className="text-gray-500 text-sm ml-4">
                                                 Placed on {formatDate(order.orderDate)}
                                             </span>
                                         </div>
                                         <div className="flex items-center">
                                             {getStatusIcon(order.status)}
-                                            <span className="font-medium capitalize">{order.status.toLowerCase()}</span>
+                                            <span className="font-medium capitalize">{order.status?.toLowerCase() || 'unknown'}</span>
                                         </div>
                                     </div>
                                     
@@ -269,29 +290,35 @@ function BuyerOrders() {
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                             <div className="md:col-span-2">
                                                 <h4 className="font-medium mb-4">Order Items</h4>
-                                                <div className="space-y-4">
-                                                    {order.items.map((item) => (
-                                                        <div key={item.id} className="flex border-b pb-4">
-                                                            <div className="w-20 h-20 rounded-md overflow-hidden mr-4">
-                                                                <img
-                                                                    src={`data:image/jpeg;base64,${item.cropImage}`}
-                                                                    alt={item.cropName}
-                                                                    className="w-full h-full object-cover"
-                                                                />
+                                                {order.items && order.items.length > 0 ? (
+                                                    <div className="space-y-4">
+                                                        {order.items.map((item) => (
+                                                            <div key={item.id || Math.random()} className="flex border-b pb-4">
+                                                                <div className="w-20 h-20 rounded-md overflow-hidden mr-4">
+                                                                    {item.cropImage && (
+                                                                        <img
+                                                                            src={`data:image/jpeg;base64,${item.cropImage}`}
+                                                                            alt={item.cropName || 'Crop image'}
+                                                                            className="w-full h-full object-cover"
+                                                                        />
+                                                                    )}
+                                                                </div>
+                                                                <div className="flex-grow">
+                                                                    <h5 className="font-medium">{item.cropName || 'Unknown Crop'}</h5>
+                                                                    <p className="text-sm text-gray-600">Sold by: {item.farmerName || 'Unknown Farmer'}</p>
+                                                                    <p className="text-sm text-gray-600">
+                                                                        {item.quantity || 0} {item.unit || 'unit'} × ₹{item.pricePerUnit || 0}
+                                                                    </p>
+                                                                </div>
+                                                                <div className="text-right">
+                                                                    <p className="font-medium">₹{item.totalPrice || 0}</p>
+                                                                </div>
                                                             </div>
-                                                            <div className="flex-grow">
-                                                                <h5 className="font-medium">{item.cropName}</h5>
-                                                                <p className="text-sm text-gray-600">Sold by: {item.farmerName}</p>
-                                                                <p className="text-sm text-gray-600">
-                                                                    {item.quantity} {item.unit} × ₹{item.pricePerUnit}
-                                                                </p>
-                                                            </div>
-                                                            <div className="text-right">
-                                                                <p className="font-medium">₹{item.totalPrice}</p>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-gray-500">No items found in this order</p>
+                                                )}
                                             </div>
                                             
                                             <div className="border-l pl-6">
@@ -299,27 +326,31 @@ function BuyerOrders() {
                                                 <div className="space-y-3">
                                                     <div className="flex justify-between">
                                                         <span className="text-gray-600">Subtotal</span>
-                                                        <span>₹{order.subtotal}</span>
+                                                        <span>₹{order.subtotal || 0}</span>
                                                     </div>
                                                     <div className="flex justify-between">
                                                         <span className="text-gray-600">Shipping</span>
-                                                        <span>₹{order.shippingFee}</span>
+                                                        <span>₹{order.shippingFee || 0}</span>
                                                     </div>
                                                     <div className="flex justify-between border-t pt-2">
                                                         <span className="font-medium">Total</span>
-                                                        <span className="font-medium">₹{order.totalAmount}</span>
+                                                        <span className="font-medium">₹{order.totalAmount || 0}</span>
                                                     </div>
                                                 </div>
                                                 
                                                 <div className="mt-6">
                                                     <h4 className="font-medium mb-2">Delivery Address</h4>
-                                                    <p className="text-sm text-gray-600">
-                                                        {order.deliveryAddress?.name}<br />
-                                                        {order.deliveryAddress?.street}<br />
-                                                        {order.deliveryAddress?.city}, {order.deliveryAddress?.state}<br />
-                                                        {order.deliveryAddress?.pincode}<br />
-                                                        Phone: {order.deliveryAddress?.phone}
-                                                    </p>
+                                                    {order.deliveryAddress ? (
+                                                        <p className="text-sm text-gray-600">
+                                                            {order.deliveryAddress.name}<br />
+                                                            {order.deliveryAddress.street}<br />
+                                                            {order.deliveryAddress.city}, {order.deliveryAddress.state}<br />
+                                                            {order.deliveryAddress.pincode}<br />
+                                                            Phone: {order.deliveryAddress.phone || 'N/A'}
+                                                        </p>
+                                                    ) : (
+                                                        <p className="text-sm text-gray-500">No delivery address available</p>
+                                                    )}
                                                 </div>
                                                 
                                                 {order.status === 'DELIVERED' && (

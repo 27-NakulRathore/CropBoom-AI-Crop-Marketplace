@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
 import {
     faLeaf,
     faArrowLeft,
@@ -33,6 +36,9 @@ function BuyNowPage() {
         const fetchCropDetails = async (id) => {
             try {
                 const response = await fetch(`http://localhost:8080/api/crops/${id}`);
+                if(response.ok){
+                    console.log("data of crop id is successfully fetched [buynowpage]");
+                }
                 if (!response.ok) throw new Error('Failed to fetch crop details');
                 const data = await response.json();
                 setCrops([data]);
@@ -62,36 +68,41 @@ function BuyNowPage() {
     }, [location.search, location.state]);
 
     const calculateTotal = () => {
-    return crops.reduce((sum, item) => {
-        const quantity = quantities[item.id] || 1;
+        return crops.reduce((sum, item) => {
+            const quantity = quantities[item.id] || 1;
+            let numericPrice = 0;
 
-        let numericPrice = 0;
-
-        if (item.price && item.price > 0) {
-            numericPrice = item.price;
-        } else if (item.priceRange) {
-            const parts = item.priceRange.split('-').map(p => parseFloat(p));
-            if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-                numericPrice = (parts[0] + parts[1]) / 2;
+            if (item.price && item.price > 0) {
+                numericPrice = item.price;
+            } else if (item.priceRange) {
+                const parts = item.priceRange.split('-').map(p => parseFloat(p));
+                if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+                    numericPrice = (parts[0] + parts[1]) / 2;
+                }
             }
-        }
 
-        return sum + numericPrice * quantity;
-    }, 0).toFixed(2);
+            return sum + numericPrice * quantity;
+        }, 0).toFixed(2);
     };
 
-
     const handleSubmit = async (e) => {
-    e.preventDefault();
+        e.preventDefault();
+        
+        if (!deliveryAddress || !deliveryDate) {
+            toast.error('Please fill all delivery details');
+            return;
+        }
 
-    const buyerEmail = localStorage.getItem('email');
-    if (!buyerEmail) {
-        alert('Buyer not authenticated');
-        return;
-    }
+        const buyerEmail = localStorage.getItem('email');
+        if (!buyerEmail) {
+            toast.error('Please login to place an order');
+            navigate('/signin');
+            return;
+        }
 
-    try {
-        const orders = crops.map(crop => {
+        try {
+            // Assuming single crop purchase for now
+            const crop = crops[0];
             const unit = crop.unit.toLowerCase();
             const conversionFactor = unitConversionToKg[unit] || 1;
             const quantityInKg = (quantities[crop.id] || 1) * conversionFactor;
@@ -108,34 +119,62 @@ function BuyNowPage() {
                 numericPrice = price || 0;
             }
 
-            return {
+            const orderData = {
                 cropId: crop.id,
-                farmerId: crop.farmer.id,
+                buyerEmail: buyerEmail,
                 quantity: quantityInKg,
-                totalPrice: quantityInKg * numericPrice,
-                deliveryAddress,
-                deliveryDate,
-                paymentMethod,
-                buyerEmail
+                deliveryAddress: deliveryAddress,
+                deliveryDate: deliveryDate,
+                paymentMethod: paymentMethod
             };
-        });
 
-           const response = await fetch('http://localhost:8080/api/orders', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(orders),  // ✅ Do NOT wrap in another object
-        });
+            const response = await fetch('http://localhost:8080/api/orders', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify(orderData)
+            });
 
+            console.log("response.ok   ", response.ok);
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Order failed');
+            }
 
-            if (!response.ok) throw new Error('Order failed');
-
-            navigate('/buyer/orders', { state: { success: true } });
+            toast.success(
+                <div>
+                    <p>Order placed successfully!</p>
+                    <p>Waiting for farmer confirmation</p>
+                    <button
+                        onClick={() => {
+                            navigate('/buyer/orders');
+                            toast.dismiss();
+                        }}
+                        className="mt-2 text-sm underline text-blue-600"
+                    >
+                        View Order Status
+                    </button>
+                </div>,
+                {
+                    autoClose: false,
+                    closeButton: true,
+                    onClose: () => navigate("/buyer/orders")
+                }
+            );
+            
+            // Clear cart if coming from cart
+            if (location.state?.fromCart) {
+                localStorage.removeItem(`cart-${buyerEmail}`);
+            }
+            
+            setTimeout(() => navigate('/buyer/orders'), 3000);
         } catch (err) {
-            console.error('Error placing orders:', err);
-            alert('Failed to place orders. Please try again.');
+            console.error('Error placing order:', err);
+            toast.error(err.message || 'Failed to place order. Please try again.');
         }
     };
-
 
     if (loading) {
         return (
@@ -150,7 +189,10 @@ function BuyNowPage() {
             <div className="min-h-screen flex justify-center items-center bg-green-50">
                 <div className="p-6 bg-white shadow rounded text-center">
                     <p className="text-red-600 font-semibold">{error}</p>
-                    <button onClick={() => navigate('/BuyerHomePage')} className="mt-4 px-4 py-2 bg-green-600 text-white rounded">
+                    <button 
+                        onClick={() => navigate('/BuyerHomePage')} 
+                        className="mt-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                    >
                         Back to Home
                     </button>
                 </div>
@@ -195,7 +237,7 @@ function BuyNowPage() {
                                         <p className="text-sm text-gray-600">Sold by: {crop.farmer.name}</p>
                                         <p className="text-sm text-gray-600">Location: {crop.address}</p>
                                         {(!crop.price || crop.price <= 0) && !crop.priceRange ? (
-                                            '⚠️ Price not available'
+                                            '⚠ Price not available'
                                         ) : (
                                             `Price per ${crop.unit}: ₹${
                                                 crop.price > 0
@@ -208,7 +250,6 @@ function BuyNowPage() {
                                                     })()
                                             }`
                                         )}
-
                                     </div>
                                 </div>
 
@@ -227,6 +268,7 @@ function BuyNowPage() {
                                             setQuantities(prev => ({ ...prev, [crop.id]: val }));
                                         }}
                                         className="border border-gray-300 rounded px-2 py-1 w-20"
+                                        required
                                     />
                                     <span className="ml-2">{crop.unit}</span>
                                 </div>
@@ -257,6 +299,7 @@ function BuyNowPage() {
                                 value={deliveryAddress}
                                 onChange={(e) => setDeliveryAddress(e.target.value)}
                                 required
+                                placeholder="Enter your complete delivery address"
                             />
                         </div>
 
@@ -290,6 +333,7 @@ function BuyNowPage() {
                                         checked={paymentMethod === 'cash_on_delivery'}
                                         onChange={() => setPaymentMethod('cash_on_delivery')}
                                         className="mr-2"
+                                        required
                                     />
                                     Cash on Delivery
                                 </label>
@@ -310,11 +354,12 @@ function BuyNowPage() {
                             type="submit"
                             className="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-md font-medium transition duration-200"
                         >
-                            Confirm Purchase (₹{calculateTotal()})
+                            Place Order (₹{calculateTotal()})
                         </button>
                     </div>
                 </form>
             </main>
+            <ToastContainer position="top-right" autoClose={3000} />
         </div>
     );
 }

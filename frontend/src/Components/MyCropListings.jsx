@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEdit, faTrash, faEye, faCheckCircle, faMapMarkerAlt, faChartLine, faStar, faCalendarAlt, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
+import { faEdit, faTrash, faEye, faCheckCircle, faMapMarkerAlt, faChartLine, faStar, faCalendarAlt, faArrowLeft, faLeaf } from '@fortawesome/free-solid-svg-icons';
 import axios from 'axios';
 
 function MyCropListings() {
@@ -18,6 +18,12 @@ function MyCropListings() {
     navigate('/FarmerHomePage', { state: { email } });
   };
 
+  // ✅ Helper function to safely parse dates
+  const parseDate = (value) => {
+    const date = new Date(value);
+    return isNaN(date.getTime()) ? null : date;
+  };
+
   useEffect(() => {
     const fetchListings = async () => {
       try {
@@ -32,7 +38,8 @@ function MyCropListings() {
           }
         );
 
-        const listingsWithData = response.data.map(listing => ({
+        const listings = Array.isArray(response.data) ? response.data : [];
+        const listingsWithData = listings.map(listing => ({
           ...listing,
           cropName: listing.cropName || 'Unnamed Crop',
           quantity: listing.quantity || 0,
@@ -42,8 +49,8 @@ function MyCropListings() {
           priceRange: listing.priceRange || null,
           qualityRating: listing.qualityRating || null,
           address: listing.address || 'Not specified',
-          listedOn: listing.listedOn ? new Date(listing.listedOn) : new Date(),
-          analysisDate: listing.analysisDate ? new Date(listing.analysisDate) : null,
+          listedOn: parseDate(listing.listedOn) || new Date(), // ✅ safer date
+          analysisDate: parseDate(listing.analysisDate),       // ✅ safer date
           imageUrl: listing.imageData 
             ? `data:image/jpeg;base64,${listing.imageData}`
             : null
@@ -98,8 +105,9 @@ function MyCropListings() {
     }
   };
 
+  // ✅ Robust date formatter
   const formatDate = (date) => {
-    if (!date) return 'N/A';
+    if (!(date instanceof Date) || isNaN(date.getTime())) return 'N/A';
     try {
       return date.toLocaleDateString('en-US', {
         year: 'numeric',
@@ -135,11 +143,38 @@ function MyCropListings() {
 
   if (!Array.isArray(listings) || listings.length === 0) {
     return (
-      <div className="p-6 text-center text-gray-600">
-        <p>You haven't listed any crops yet.</p>
-        <Link to="/farmer/upload-crop" className="text-green-500 hover:underline mt-2 inline-block">
-          Upload Your First Crop
-        </Link>
+      <div className="min-h-screen bg-gray-50">
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex items-center mb-6">
+            <button 
+              onClick={() => navigate('/FarmerHomePage', { state: { email } })} 
+              className="mr-4 text-gray-600 hover:text-gray-800"
+            >
+              <FontAwesomeIcon icon={faArrowLeft} size="lg" />
+            </button>
+            <h1 className="text-2xl font-bold text-gray-800 flex items-center">
+              <FontAwesomeIcon icon={faChartLine} className="mr-3 text-green-600" />
+              Your Crop Listings
+            </h1>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-8 text-center">
+            <FontAwesomeIcon 
+              icon={faChartLine} 
+              className="text-gray-300 text-5xl mb-4" 
+            />
+            <h2 className="text-xl font-semibold text-gray-700 mb-2">No crops listed yet</h2>
+            <p className="text-gray-500 mb-6">Start by uploading your first crop to get visibility in the marketplace.</p>
+            <Link
+              to="/farmer/upload-crop"
+              state={{ email }}  // ✅ pass email via navigation state
+              className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg inline-flex items-center"
+            >
+              <FontAwesomeIcon icon={faLeaf} className="mr-2" />
+              Go, Upload Here!
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }
