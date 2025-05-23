@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import '../index.css';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faLeaf, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
+import { faLeaf, faEye, faEyeSlash, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -139,17 +139,26 @@ function SignInForm() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-green-100 to-green-50 flex justify-center items-center">
+        <div className="min-h-screen bg-gradient-to-br from-green-100 to-green-50 flex justify-center items-center p-4 md:p-10">
             <div className="bg-white p-8 rounded-lg shadow-md border border-gray-200 max-w-md w-full animate-fade-in">
-                {/* CropBoom Logo and Name */}
-                <div className="text-center mb-6">
-                    <FontAwesomeIcon
-                        icon={faLeaf}
-                        size="2x"
-                        className="text-green-600 mb-2 animate-pulse shadow-md rounded-full bg-white p-2"
-                    />
-                    <h1 className="text-2xl font-bold text-green-700">CropBoom</h1>
-                    <p className="text-gray-600">It's good to have you back!</p>
+                {/* Header with back arrow */}
+                <div className="flex items-center mb-4">
+                    <button 
+                        onClick={() => navigate('/')}
+                        className="text-green-600 hover:text-green-800 mr-2"
+                    >
+                        <FontAwesomeIcon icon={faArrowLeft} size="lg" />
+                    </button>
+                    <div className="text-center flex-grow">
+                        <FontAwesomeIcon
+                            icon={faLeaf}
+                            size="2x"
+                            className="text-green-600 mb-2 animate-pulse shadow-md rounded-full bg-white p-2"
+                        />
+                        <h1 className="text-2xl font-bold text-green-700">CropBoom</h1>
+                        <p className="text-gray-600">It's good to have you back!</p>
+                    </div>
+                    <div className="w-8"></div> {/* Spacer for alignment */}
                 </div>
 
                 {/* Sign In Form */}
@@ -212,11 +221,12 @@ function SignInForm() {
                         Sign In
                     </button>
                     <div className="text-center mt-4">
+                        <span className="text-gray-600">New user? </span>
                         <Link
-                            to="/forgot-password"
-                            className="inline-block align-baseline font-bold text-sm text-green-500 hover:text-green-800"
+                            to="/"
+                            className="font-bold text-sm text-green-500 hover:text-green-800"
                         >
-                            Forgot Password?
+                            Register here
                         </Link>
                     </div>
                 </form>
