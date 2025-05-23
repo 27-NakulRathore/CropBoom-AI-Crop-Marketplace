@@ -6,7 +6,6 @@ import axios from 'axios';
 
 const BookingsPage = () => {
   const location = useLocation();
-  const email = location.state?.email;
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -14,61 +13,55 @@ const BookingsPage = () => {
   useEffect(() => {
     const fetchBookings = async () => {
       try {
+        const email = localStorage.getItem("email");
         const response = await axios.get(`http://localhost:8080/api/bookings/farmer/${email}`);
-        setBookings(response.data);
+        
+        const formattedBookings = response.data.map(booking => ({
+          id: booking.id,
+          cropName: booking.cropName || "Unknown Crop",
+          quantity: booking.quantity || 0,
+          unit: booking.unit || "kg",
+          buyerName: booking.buyerName || "Unknown Buyer",
+          buyerEmail: booking.buyerEmail || "no-email@example.com",
+          buyerPhone: booking.buyerPhone ? booking.buyerPhone : "Not provided",
+          bookingDate: booking.bookingDate || new Date().toISOString(),
+          status: (booking.status || "pending").toLowerCase(),
+          paymentStatus: booking.paymentStatus || "pending",
+          price: booking.price || `₹${booking.totalPrice || 0}`,
+          deliveryAddress: booking.deliveryAddress || "Address not specified",
+          buyerId: booking.buyerId
+        }));
+
+        setBookings(formattedBookings);
         setLoading(false);
       } catch (err) {
+        console.error("Error fetching bookings:", err);
         setError(err.message);
         setLoading(false);
-        // Fallback to sample data if API fails
-        setBookings([
-          {
-            id: 1,
-            cropName: 'Organic Wheat',
-            quantity: 50,
-            unit: 'kg',
-            buyerName: 'John Doe',
-            buyerEmail: 'john@example.com',
-            buyerPhone: '9876543210',
-            bookingDate: '2023-06-15',
-            status: 'confirmed',
-            price: '₹22-25/kg',
-            deliveryAddress: '123 Farm St, Agricultural Area, Farmland 560001',
-            paymentStatus: 'paid'
-          },
-          {
-            id: 2,
-            cropName: 'Basmati Rice',
-            quantity: 2,
-            unit: 'quintal',
-            buyerName: 'Jane Smith',
-            buyerEmail: 'jane@example.com',
-            buyerPhone: '9876543211',
-            bookingDate: '2023-06-18',
-            status: 'pending',
-            price: '₹40-45/kg',
-            deliveryAddress: '456 Grain Ave, Crop City 560002',
-            paymentStatus: 'pending'
-          },
-        ]);
       }
     };
 
-    if (email) {
-      fetchBookings();
-    }
-  }, [email]);
+    fetchBookings();
+  }, []);
 
   const handleDelivery = async (bookingId) => {
     try {
+      const booking = bookings.find(b => b.id === bookingId);
+      if (!booking) return;
+
       await axios.put(`http://localhost:8080/api/bookings/${bookingId}/status`, null, {
         params: { status: 'confirmed' }
       });
-      setBookings(bookings.map(booking => 
-        booking.id === bookingId ? { ...booking, status: 'confirmed' } : booking
+
+      // Update local state
+      setBookings(bookings.map(b => 
+        b.id === bookingId ? { ...b, status: 'confirmed' } : b
       ));
+
+      alert('Order confirmed!');
     } catch (err) {
       console.error("Failed to update delivery status:", err);
+      alert('Failed to confirm order. Please try again.');
     }
   };
 
@@ -85,6 +78,8 @@ const BookingsPage = () => {
     }
   };
 
+  // ... rest of your component (render method) remains the same ...
+
   if (loading) return (
     <div className="min-h-screen bg-green-50 flex items-center justify-center">
       <div className="text-green-700 text-xl">Loading bookings...</div>
@@ -93,7 +88,7 @@ const BookingsPage = () => {
 
   if (error) return (
     <div className="min-h-screen bg-green-50 flex items-center justify-center">
-      <div className="text-red-600 text-xl">Error: {error}. Using sample data.</div>
+      <div className="text-red-600 text-xl">Error: {error}</div>
     </div>
   );
 
@@ -191,7 +186,7 @@ const BookingsPage = () => {
                           : 'text-green-600 hover:text-green-900'}`}
                       >
                         <FontAwesomeIcon icon={faTruck} className="mr-1" /> Delivery
-                      </button>
+                        </button>
                       <button 
                         onClick={() => handlePayment(booking.id)}
                         disabled={booking.paymentStatus === 'paid'}

@@ -3,7 +3,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-
 import {
     faLeaf,
     faArrowLeft,
@@ -18,10 +17,16 @@ function BuyNowPage() {
     const [crops, setCrops] = useState([]);
     const [quantities, setQuantities] = useState({});
     const [deliveryAddress, setDeliveryAddress] = useState('');
-    const [deliveryDate, setDeliveryDate] = useState('');
+    // Set default delivery date to tomorrow
+    const [deliveryDate, setDeliveryDate] = useState(() => {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        return tomorrow.toISOString().split('T')[0];
+    });
     const [paymentMethod, setPaymentMethod] = useState('cash_on_delivery');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [isSubmitting, setIsSubmitting] = useState(false); // Added loading state for submission
 
     const unitConversionToKg = {
         kg: 1,
@@ -85,11 +90,31 @@ function BuyNowPage() {
         }, 0).toFixed(2);
     };
 
+    const validateForm = () => {
+        const errors = [];
+        if (!deliveryAddress.trim()) errors.push('Delivery address is required');
+        if (!deliveryDate) errors.push('Delivery date is required');
+        if (crops.some(crop => !quantities[crop.id] || quantities[crop.id] < 1)) {
+            errors.push('Invalid quantities');
+        }
+        return errors;
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setIsSubmitting(true);
         
-        if (!deliveryAddress || !deliveryDate) {
-            toast.error('Please fill all delivery details');
+           // Check if crop exists and is valid
+        if (!crops.length || !crops[0]?.id) {
+            toast.error('Invalid crop selection. Please refresh the page.');
+            setIsSubmitting(false);
+            return;
+        }
+            // Validate form before submission
+        const formErrors = validateForm();
+        if (formErrors.length > 0) {
+            toast.error(formErrors.join('\n'));
+            setIsSubmitting(false);
             return;
         }
 
@@ -97,36 +122,39 @@ function BuyNowPage() {
         if (!buyerEmail) {
             toast.error('Please login to place an order');
             navigate('/signin');
+            setIsSubmitting(false);
             return;
         }
 
         try {
-            // Assuming single crop purchase for now
             const crop = crops[0];
             const unit = crop.unit.toLowerCase();
             const conversionFactor = unitConversionToKg[unit] || 1;
             const quantityInKg = (quantities[crop.id] || 1) * conversionFactor;
 
-            let price = (crop.price !== null && crop.price !== undefined) ? crop.price : crop.priceRange;
-            let numericPrice = 0;
-
-            if (typeof price === 'string') {
-                const parts = price.split('-').map(p => parseFloat(p));
-                numericPrice = parts.length === 2
-                    ? (parts[0] + parts[1]) / 2
-                    : parseFloat(price);
+            // Calculate price
+            let numericPrice;
+            if (crop.price && crop.price > 0) {
+                numericPrice = crop.price;
+            } else if (crop.priceRange) {
+                const parts = crop.priceRange.split('-').map(p => parseFloat(p));
+                numericPrice = parts.length === 2 ? (parts[0] + parts[1]) / 2 : parseFloat(crop.priceRange);
             } else {
-                numericPrice = price || 0;
+                numericPrice = 0;
             }
 
             const orderData = {
                 cropId: crop.id,
+                farmerId: crop.farmer.id,
                 buyerEmail: buyerEmail,
                 quantity: quantityInKg,
+                totalPrice: (numericPrice * quantityInKg).toFixed(2),
                 deliveryAddress: deliveryAddress,
                 deliveryDate: deliveryDate,
                 paymentMethod: paymentMethod
             };
+
+            console.log("Sending order data:", orderData);
 
             const response = await fetch('http://localhost:8080/api/orders', {
                 method: 'POST',
@@ -137,16 +165,32 @@ function BuyNowPage() {
                 body: JSON.stringify(orderData)
             });
 
-            console.log("response.ok   ", response.ok);
+            // First read the response as text
+            const responseText = await response.text();
+            
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Order failed');
+                let errorMessage = 'Order failed';
+                try {
+                    // Try to parse as JSON to get detailed error messages
+                    const errorData = JSON.parse(responseText);
+                    errorMessage = errorData.message || 
+                                  (errorData.errors ? errorData.errors.join('\n') : responseText);
+                } catch {
+                    // If not JSON, use the raw text
+                    errorMessage = responseText;
+                }
+                throw new Error(errorMessage);
             }
 
+            // If successful, parse the response
+            const responseData = JSON.parse(responseText);
+            console.log("Order successful:", responseData);
+
+            // Show success message
             toast.success(
                 <div>
                     <p>Order placed successfully!</p>
-                    <p>Waiting for farmer confirmation</p>
+                    <p>Order ID: {responseData.id}</p>
                     <button
                         onClick={() => {
                             navigate('/buyer/orders');
@@ -159,20 +203,35 @@ function BuyNowPage() {
                 </div>,
                 {
                     autoClose: false,
-                    closeButton: true,
-                    onClose: () => navigate("/buyer/orders")
+                    closeButton: true
                 }
             );
-            
+
             // Clear cart if coming from cart
             if (location.state?.fromCart) {
                 localStorage.removeItem(`cart-${buyerEmail}`);
             }
-            
+
+            // Redirect after 3 seconds
             setTimeout(() => navigate('/buyer/orders'), 3000);
         } catch (err) {
-            console.error('Error placing order:', err);
-            toast.error(err.message || 'Failed to place order. Please try again.');
+            console.error('Error placing order:', {
+                error: err,
+                message: err.message,
+                stack: err.stack
+            });
+            
+            // User-friendly error messages
+            let userMessage = err.message || 'Failed to place order. Please try again.';
+            if (err.message.includes('deliveryDate')) {
+                userMessage = 'Invalid delivery date. Please choose a future date.';
+            } else if (err.message.includes('quantity')) {
+                userMessage = 'Invalid quantity. Please check your input.';
+            }
+            
+            toast.error(userMessage);
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -313,7 +372,17 @@ function BuyNowPage() {
                                 id="date"
                                 className="w-full border p-2 rounded"
                                 value={deliveryDate}
-                                onChange={(e) => setDeliveryDate(e.target.value)}
+                                onChange={(e) => {
+                                    const selectedDate = new Date(e.target.value);
+                                    const today = new Date();
+                                    today.setHours(0, 0, 0, 0);
+                                    
+                                    if (selectedDate >= today) {
+                                        setDeliveryDate(e.target.value);
+                                    } else {
+                                        toast.error('Delivery date must be today or in the future');
+                                    }
+                                }}
                                 min={new Date().toISOString().split('T')[0]}
                                 required
                             />
@@ -352,9 +421,10 @@ function BuyNowPage() {
 
                         <button
                             type="submit"
-                            className="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-md font-medium transition duration-200"
+                            disabled={isSubmitting}
+                            className={`w-full ${isSubmitting ? 'bg-gray-400' : 'bg-green-600 hover:bg-green-700'} text-white py-3 px-4 rounded-md font-medium transition duration-200`}
                         >
-                            Place Order (₹{calculateTotal()})
+                            {isSubmitting ? 'Placing Order...' : `Place Order (₹${calculateTotal()})`}
                         </button>
                     </div>
                 </form>

@@ -1,25 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
 import {
     faLeaf,
     faSignOutAlt,
     faUserCircle,
-    faCog,
     faSearch,
     faBoxOpen,
-    faMapMarkerAlt,
     faShoppingCart,
     faClock,
     faCheckCircle,
     faTruck,
-    faTimesCircle
+    faTimesCircle,
+    faExclamationCircle,
+    faUndo
 } from '@fortawesome/free-solid-svg-icons';
 
 function BuyerOrders() {
     const navigate = useNavigate();
-    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-    const [searchTerm, setSearchTerm] = useState('');
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -28,10 +29,14 @@ function BuyerOrders() {
 
     // Initialize cart count from localStorage
     useEffect(() => {
-        const cart = JSON.parse(localStorage.getItem('cart')) || [];
-        setCartCount(cart.length);
+        const email = localStorage.getItem("email");
+        if (email) {
+            const cart = JSON.parse(localStorage.getItem(`cart-${email}`)) || [];
+            setCartCount(cart.reduce((total, item) => total + (item.cartQuantity || 1), 0));
+        }
     }, []);
 
+    // Fetch buyer details
     useEffect(() => {
         const email = localStorage.getItem("email");
         if (email) {
@@ -42,79 +47,135 @@ function BuyerOrders() {
         }
     }, []);
 
+    // Fetch orders
     useEffect(() => {
         const fetchOrders = async () => {
-            try {
-                const email = localStorage.getItem("email");
-                if (!email) {
-                    navigate('/signin');
-                    return;
-                }
-                
-                const response = await fetch(`http://localhost:8080/api/orders/buyer/${email}`, {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    }
-                });
-                
-                if (!response.ok) throw new Error("Failed to fetch orders");
-                
-                const data = await response.json();
-                // Ensure data is an array and items exist for each order
-                const processedOrders = Array.isArray(data) ? 
-                    data.map(order => ({
-                        ...order,
-                        items: Array.isArray(order.items) ? order.items : [],
-                        deliveryAddress: order.deliveryAddress || {}
-                    })) : [];
-                
-                setOrders(processedOrders);
-                setLoading(false);
-            } catch (err) {
-                console.error("Error fetching orders:", err);
-                setError(err.message || "Failed to load orders");
-                setLoading(false);
-                setOrders([]); // Ensure orders is always an array
-            }
-        };
+    try {
+        const email = localStorage.getItem("email");
+        if (!email) {
+            navigate('/signin');
+            return;
+        }
+        
+        const response = await fetch(`http://localhost:8080/api/orders/buyer/${encodeURIComponent(email)}`);
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || "Failed to fetch orders");
+        }
+        
+        const data = await response.json();
+        
+        if (!data || data.length === 0) {
+            setOrders([]);
+            setLoading(false);
+            return;
+        }
+        
+        const formattedOrders = data.map(order => {
+            const quantity = order.quantity || 1;
+            const totalPrice = order.totalPrice || 0;
+            
+            return {
+                ...order,
+                orderDate: order.bookingDate || order.orderDate || new Date().toISOString(),
+                items: [{
+                    cropName: order.crop?.cropName || order.cropName || "Unknown Crop",
+                    farmerName: order.farmer?.name || order.farmerName || "Unknown Farmer",
+                    quantity: quantity,
+                    pricePerUnit: totalPrice / quantity,
+                    totalPrice: totalPrice,
+                    cropImage: order.crop?.cropImage || order.cropImage || ""
+                }],
+                totalAmount: totalPrice
+            };
+        });
+        
+        setOrders(formattedOrders);
+        setLoading(false);
+    } catch (err) {
+        console.error("Error fetching orders:", err);
+        setError(err.message || "Failed to load orders. Please try again later.");
+        setLoading(false);
+    }
+};
         fetchOrders();
     }, [navigate]);
 
-    const toggleDropdown = () => setIsDropdownOpen(!isDropdownOpen);
-
     const handleLogout = () => {
-        localStorage.removeItem('email');
-        localStorage.removeItem('token');
+        const email = localStorage.getItem("email");
+        if (email) {
+            localStorage.removeItem(`cart-${email}`);
+            localStorage.removeItem("email");
+        }
         navigate('/signin');
     };
 
-    const handleEditProfile = () => {
-        navigate('/buyer/profile/edit');
-    };
-
-    const getStatusIcon = (status) => {
+    const getStatusDetails = (status) => {
         switch (status) {
             case 'PENDING':
-                return <FontAwesomeIcon icon={faClock} className="text-yellow-500 mr-2" />;
-            case 'PROCESSING':
-                return <FontAwesomeIcon icon={faTruck} className="text-blue-500 mr-2" />;
+                return {
+                    icon: faClock,
+                    color: 'text-yellow-500',
+                    bgColor: 'bg-yellow-50',
+                    text: 'Waiting for farmer confirmation'
+                };
+            case 'CONFIRMED':
+                return {
+                    icon: faCheckCircle,
+                    color: 'text-blue-500',
+                    bgColor: 'bg-blue-50',
+                    text: 'Farmer has accepted your order'
+                };
+            case 'SHIPPED':
+                return {
+                    icon: faTruck,
+                    color: 'text-purple-500',
+                    bgColor: 'bg-purple-50',
+                    text: 'Your order is on the way'
+                };
             case 'DELIVERED':
-                return <FontAwesomeIcon icon={faCheckCircle} className="text-green-500 mr-2" />;
+                return {
+                    icon: faCheckCircle,
+                    color: 'text-green-500',
+                    bgColor: 'bg-green-50',
+                    text: 'Delivered successfully'
+                };
+            case 'REJECTED':
+                return {
+                    icon: faTimesCircle,
+                    color: 'text-red-500',
+                    bgColor: 'bg-red-50',
+                    text: 'Order was rejected'
+                };
             case 'CANCELLED':
-                return <FontAwesomeIcon icon={faTimesCircle} className="text-red-500 mr-2" />;
+                return {
+                    icon: faExclamationCircle,
+                    color: 'text-gray-500',
+                    bgColor: 'bg-gray-50',
+                    text: 'Order was cancelled'
+                };
             default:
-                return <FontAwesomeIcon icon={faClock} className="text-gray-500 mr-2" />;
+                return {
+                    icon: faClock,
+                    color: 'text-gray-500',
+                    bgColor: 'bg-gray-50',
+                    text: 'Processing'
+                };
         }
     };
 
     const formatDate = (dateString) => {
-        if (!dateString) return 'N/A';
-        try {
-            const options = { year: 'numeric', month: 'long', day: 'numeric' };
-            return new Date(dateString).toLocaleDateString(undefined, options);
-        } catch {
-            return 'Invalid date';
-        }
+        const options = { year: 'numeric', month: 'short', day: 'numeric' };
+        return new Date(dateString).toLocaleDateString(undefined, options);
+    };
+
+    const handleReorder = (order) => {
+        toast.info('Reorder functionality coming soon!');
+    };
+
+    const handleTrackOrder = (orderId) => {
+        toast.info('Order tracking coming soon!');
     };
 
     return (
@@ -123,28 +184,13 @@ function BuyerOrders() {
             <header className="bg-white shadow px-6 py-4">
                 <div className="flex justify-between items-center">
                     <Link
-                        to="/buyer/home"
+                        to="/BuyerHomePage"
                         className="text-green-700 font-bold text-2xl flex items-center hover:opacity-80"
                     >
                         <FontAwesomeIcon icon={faLeaf} className="mr-2 text-green-600 animate-pulse" />
                         CropBoom
                     </Link>
 
-                    {/* Search Bar */}
-                    <div className="w-full max-w-md mx-4 relative">
-                        <input
-                            type="text"
-                            placeholder="Search for crops..."
-                            className="w-full py-2 px-4 pl-10 rounded-full border border-gray-300 focus:ring-2 focus:ring-green-400 focus:outline-none"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                        <button className="absolute top-1/2 left-3 transform -translate-y-1/2 text-gray-500">
-                            <FontAwesomeIcon icon={faSearch} />
-                        </button>
-                    </div>
-
-                    {/* Cart and Profile */}
                     <div className="flex items-center space-x-4">
                         <Link to="/buyer/cart" className="text-gray-600 hover:text-gray-800 relative">
                             <FontAwesomeIcon icon={faShoppingCart} size="lg" />
@@ -156,7 +202,10 @@ function BuyerOrders() {
                         </Link>
 
                         <div className="relative">
-                            <button onClick={toggleDropdown} className="flex items-center">
+                            <button 
+                                onClick={() => navigate('/buyer/profile')} 
+                                className="flex items-center"
+                            >
                                 <FontAwesomeIcon
                                     icon={faUserCircle}
                                     size="lg"
@@ -166,50 +215,6 @@ function BuyerOrders() {
                                     {buyer?.name || 'Profile'}
                                 </span>
                             </button>
-
-                            {isDropdownOpen && (
-                                <div className="absolute right-0 mt-2 w-56 bg-white shadow-lg rounded-md z-50 overflow-hidden">
-                                    <div className="px-4 py-3 border-b">
-                                        <p className="font-medium">{buyer?.name || 'User'}</p>
-                                        <p className="text-sm text-gray-600 truncate">{buyer?.email || ''} </p>
-                                    </div>
-                                    <Link
-                                        to="/buyer/profile"
-                                        className="block px-4 py-2 hover:bg-gray-100 text-gray-700"
-                                    >
-                                        <FontAwesomeIcon icon={faUserCircle} className="mr-2" />
-                                        My Profile
-                                    </Link>
-                                    <button
-                                        onClick={handleEditProfile}
-                                        className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-700"
-                                    >
-                                        <FontAwesomeIcon icon={faCog} className="mr-2" />
-                                        Edit Profile
-                                    </button>
-                                    <Link
-                                        to="/buyer/orders"
-                                        className="block px-4 py-2 hover:bg-gray-100 text-gray-700 bg-gray-100"
-                                    >
-                                        <FontAwesomeIcon icon={faBoxOpen} className="mr-2" />
-                                        Order History
-                                    </Link>
-                                    <Link
-                                        to="/buyer/addresses"
-                                        className="block px-4 py-2 hover:bg-gray-100 text-gray-700"
-                                    >
-                                        <FontAwesomeIcon icon={faMapMarkerAlt} className="mr-2" />
-                                        Saved Addresses
-                                    </Link>
-                                    <button
-                                        onClick={handleLogout}
-                                        className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-700 border-t"
-                                    >
-                                        <FontAwesomeIcon icon={faSignOutAlt} className="mr-2" />
-                                        Logout
-                                    </button>
-                                </div>
-                            )}
                         </div>
                     </div>
                 </div>
@@ -226,7 +231,7 @@ function BuyerOrders() {
                             </div>
                             <div>
                                 <h2 className="text-xl font-semibold">Your Orders</h2>
-                                <p className="text-gray-600">View and track your order history</p>
+                                <p className="text-gray-600">Track and manage your purchases</p>
                             </div>
                         </div>
                         <Link
@@ -243,7 +248,7 @@ function BuyerOrders() {
                     <div className="flex justify-between items-center mb-6">
                         <h3 className="text-xl font-semibold text-gray-800">Order History</h3>
                         <div className="text-sm text-gray-500">
-                            Showing {orders.length} orders
+                            {orders.length} {orders.length === 1 ? 'order' : 'orders'} placed
                         </div>
                     </div>
 
@@ -259,110 +264,118 @@ function BuyerOrders() {
                         </div>
                     ) : orders.length === 0 ? (
                         <div className="text-center py-12">
-                            <FontAwesomeIcon icon={faBoxOpen} className="text-gray-300 text-5xl mb-4" />
-                            <h4 className="text-xl font-medium text-gray-600">No orders found</h4>
-                            <p className="text-gray-500 mt-2">You haven't placed any orders yet.</p>
+                            <FontAwesomeIcon 
+                                icon={faBoxOpen} 
+                                className="text-gray-300 text-5xl mb-4 mx-auto" 
+                            />
+                            <h4 className="text-xl font-medium text-gray-600">No orders yet</h4>
+                            <p className="text-gray-500 mt-2">You haven't placed any orders yet</p>
                             <Link
                                 to="/BuyerHomePage"
                                 className="mt-4 inline-block bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded"
                             >
-                                Start Shopping
+                                Browse Products
                             </Link>
                         </div>
                     ) : (
-                        <div className="space-y-6">
-                            {orders.map((order) => (
-                                <div key={order.id || Math.random()} className="border rounded-lg overflow-hidden">
-                                    <div className="bg-gray-50 px-6 py-4 border-b flex justify-between items-center">
-                                        <div>
-                                            <span className="font-medium">Order #{order.id || 'N/A'}</span>
-                                            <span className="text-gray-500 text-sm ml-4">
-                                                Placed on {formatDate(order.orderDate)}
-                                            </span>
-                                        </div>
-                                        <div className="flex items-center">
-                                            {getStatusIcon(order.status)}
-                                            <span className="font-medium capitalize">{order.status?.toLowerCase() || 'unknown'}</span>
-                                        </div>
-                                    </div>
-                                    
-                                    <div className="p-6">
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                            <div className="md:col-span-2">
-                                                <h4 className="font-medium mb-4">Order Items</h4>
-                                                {order.items && order.items.length > 0 ? (
-                                                    <div className="space-y-4">
-                                                        {order.items.map((item) => (
-                                                            <div key={item.id || Math.random()} className="flex border-b pb-4">
-                                                                <div className="w-20 h-20 rounded-md overflow-hidden mr-4">
-                                                                    {item.cropImage && (
-                                                                        <img
-                                                                            src={`data:image/jpeg;base64,${item.cropImage}`}
-                                                                            alt={item.cropName || 'Crop image'}
-                                                                            className="w-full h-full object-cover"
-                                                                        />
-                                                                    )}
-                                                                </div>
-                                                                <div className="flex-grow">
-                                                                    <h5 className="font-medium">{item.cropName || 'Unknown Crop'}</h5>
-                                                                    <p className="text-sm text-gray-600">Sold by: {item.farmerName || 'Unknown Farmer'}</p>
-                                                                    <p className="text-sm text-gray-600">
-                                                                        {item.quantity || 0} {item.unit || 'unit'} × ₹{item.pricePerUnit || 0}
-                                                                    </p>
-                                                                </div>
-                                                                <div className="text-right">
-                                                                    <p className="font-medium">₹{item.totalPrice || 0}</p>
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                ) : (
-                                                    <p className="text-gray-500">No items found in this order</p>
-                                                )}
+                        <div className="space-y-4">
+                            {orders.map((order) => {
+                                const statusDetails = getStatusDetails(order.status);
+                                return (
+                                    <div key={order.id} className="border rounded-lg overflow-hidden">
+                                        <div className={`${statusDetails.bgColor} px-6 py-3 flex justify-between items-center`}>
+                                            <div className="flex items-center">
+                                                <FontAwesomeIcon 
+                                                    icon={statusDetails.icon} 
+                                                    className={`${statusDetails.color} mr-2`} 
+                                                />
+                                                <span className="font-medium">
+                                                    {statusDetails.text}
+                                                </span>
                                             </div>
-                                            
-                                            <div className="border-l pl-6">
-                                                <h4 className="font-medium mb-4">Order Summary</h4>
-                                                <div className="space-y-3">
-                                                    <div className="flex justify-between">
-                                                        <span className="text-gray-600">Subtotal</span>
-                                                        <span>₹{order.subtotal || 0}</span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-gray-600">Shipping</span>
-                                                        <span>₹{order.shippingFee || 0}</span>
-                                                    </div>
-                                                    <div className="flex justify-between border-t pt-2">
-                                                        <span className="font-medium">Total</span>
-                                                        <span className="font-medium">₹{order.totalAmount || 0}</span>
-                                                    </div>
+                                            <div className="text-sm text-gray-600">
+                                                Ordered on {formatDate(order.orderDate)}
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="p-4 border-b">
+                                            <div className="flex justify-between">
+                                                <div>
+                                                    <span className="font-medium">Order #{order.id}</span>
                                                 </div>
-                                                
-                                                <div className="mt-6">
-                                                    <h4 className="font-medium mb-2">Delivery Address</h4>
-                                                    {order.deliveryAddress ? (
+                                                <div className="text-sm">
+                                                    {order.items.length} {order.items.length === 1 ? 'item' : 'items'}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="p-4">
+                                            {order.items.map((item, index) => (
+                                                <div 
+                                                    key={index} 
+                                                    className={`flex pb-4 ${index !== order.items.length - 1 ? 'border-b mb-4' : ''}`}
+                                                >
+                                                    <div className="w-16 h-16 rounded-md overflow-hidden mr-4">
+                                                        {item.cropImage ? (
+                                                            <img
+                                                                src={`data:image/jpeg;base64,${item.cropImage}`}
+                                                                alt={item.cropName}
+                                                                className="w-full h-full object-cover"
+                                                            />
+                                                        ) : (
+                                                            <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                                                                <FontAwesomeIcon icon={faLeaf} className="text-gray-400" />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex-grow">
+                                                        <h4 className="font-medium">{item.cropName}</h4>
+                                                        <p className="text-sm text-gray-600">Sold by: {item.farmerName}</p>
                                                         <p className="text-sm text-gray-600">
-                                                            {order.deliveryAddress.name}<br />
-                                                            {order.deliveryAddress.street}<br />
-                                                            {order.deliveryAddress.city}, {order.deliveryAddress.state}<br />
-                                                            {order.deliveryAddress.pincode}<br />
-                                                            Phone: {order.deliveryAddress.phone || 'N/A'}
+                                                            {item.quantity} kg × ₹{item.pricePerUnit.toFixed(2)}/kg
                                                         </p>
-                                                    ) : (
-                                                        <p className="text-sm text-gray-500">No delivery address available</p>
-                                                    )}
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <p className="font-medium">₹{item.totalPrice.toFixed(2)}</p>
+                                                        {order.status === 'DELIVERED' && (
+                                                            <button 
+                                                                onClick={() => handleReorder(item)}
+                                                                className="mt-2 text-xs text-green-600 hover:underline flex items-center"
+                                                            >
+                                                                <FontAwesomeIcon icon={faUndo} className="mr-1" />
+                                                                Reorder
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                                
-                                                {order.status === 'DELIVERED' && (
-                                                    <button className="mt-6 w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded">
-                                                        Buy Again
+                                            ))}
+                                        </div>
+                                        
+                                        <div className="bg-gray-50 px-4 py-3 border-t flex justify-between items-center">
+                                            <div>
+                                                <span className="text-sm text-gray-600">Total:</span>
+                                                <span className="ml-2 font-medium">₹{order.totalAmount.toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex space-x-2">
+                                                {order.status !== 'REJECTED' && order.status !== 'CANCELLED' && (
+                                                    <button 
+                                                        onClick={() => handleTrackOrder(order.id)}
+                                                        className="text-sm text-blue-600 hover:underline"
+                                                    >
+                                                        Track Order
                                                     </button>
                                                 )}
+                                                <button 
+                                                    onClick={() => navigate(`/buyer/orders/${order.id}`)}
+                                                    className="text-sm text-gray-600 hover:underline"
+                                                >
+                                                    View Details
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
                 </section>
