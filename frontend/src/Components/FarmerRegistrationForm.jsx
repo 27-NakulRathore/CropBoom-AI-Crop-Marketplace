@@ -207,31 +207,31 @@ function FarmerRegistrationForm() {
                         </div>
                     </div>
 
-                    <div className="flex items-center relative">
-                        <label className="block text-gray-700 text-sm font-bold w-1/3 text-right mr-3" htmlFor="password">
-                            Password:
-                        </label>
-                        <div className="w-2/3 relative">
-                            <input
-                                className={`shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline ${errors.password ? 'border-red-500' : 'border-gray-300 focus:border-green-500'}`}
-                                id="password"
-                                name="password"
-                                type={showPassword ? 'text' : 'password'}
-                                placeholder="Password"
-                                value={formData.password}
-                                onChange={handleChange}
-                            />
-                            <button
-                                type="button"
-                                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 focus:outline-none"
-                                onClick={() => setShowPassword(!showPassword)}
-                                title={showPassword ? 'Hide Password' : 'Show Password'}
-                            >
-                                <FontAwesomeIcon icon={showPassword ? faEye : faEyeSlash} size="lg" />
-                            </button>
-                            {errors.password && <p className="text-red-500 text-xs italic mt-1">{errors.password}</p>}
-                        </div>
-                    </div>
+                    <div>
+                                            <div className="flex items-center relative">
+                                                <label className="block text-gray-700 text-sm font-bold w-1/3 text-right mr-3" htmlFor="password">
+                                                    Password:
+                                                </label>
+                                                <input
+                                                    className={`shadow appearance-none border rounded w-2/3 py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline ${errors.password ? 'border-red-500' : 'border-gray-300 focus:border-blue-500'}`}
+                                                    id="password"
+                                                    name="password"
+                                                    type={showPassword ? 'text' : 'password'}
+                                                    placeholder="Password"
+                                                    value={formData.password}
+                                                    onChange={handleChange}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 focus:outline-none"
+                                                    onClick={() => setShowPassword(!showPassword)}
+                                                    title={showPassword ? 'Hide Password' : 'Show Password'}
+                                                >
+                                                    <FontAwesomeIcon icon={showPassword ? faEye : faEyeSlash} size="lg" />
+                                                </button>
+                                            </div>
+                                            {errors.password && <p className="text-red-500 text-xs italic text-right pr-3 mt-1">{errors.password}</p>}
+                                        </div>
 
                     <div className="flex items-center">
                         <label className="block text-gray-700 text-sm font-bold w-1/3 text-right mr-3" htmlFor="location">
