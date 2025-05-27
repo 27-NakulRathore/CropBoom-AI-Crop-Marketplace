@@ -207,7 +207,7 @@ const BookingsPage = () => {
         <div className="mt-8 bg-white rounded-lg shadow-md p-6">
           <h2 className="text-xl font-semibold text-gray-800 mb-4">Delivery Instructions</h2>
           <p className="text-gray-600 mb-4">
-            For confirmed bookings, please ensure timely delivery as per the agreed terms.
+            For confirmed booking, please ensure timely delivery as per the agreed terms.
             Contact the buyer if there are any changes or delays.
           </p>
           <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
