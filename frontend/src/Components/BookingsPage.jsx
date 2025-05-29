@@ -165,11 +165,11 @@ const BookingsPage = () => {
                       }`}>
                         {booking.status === 'confirmed' ? (
                           <>
-                            <FontAwesomeIcon icon={faCheckCircle} className="mr-1" /> Confirmed!!
+                            <FontAwesomeIcon icon={faCheckCircle} className="mr-1" /> Confirmed
                           </>
                         ) : (
                           <>
-                            <FontAwesomeIcon icon={faTimesCircle} className="mr-1" /> Pending...
+                            <FontAwesomeIcon icon={faTimesCircle} className="mr-1" /> Pending
                           </>
                         )}
                       </span>
